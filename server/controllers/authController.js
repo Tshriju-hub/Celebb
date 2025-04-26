@@ -229,6 +229,10 @@ const googleSignIn = async (req, res) => {
       avatar: picture,
     });
     await user.save();
+  } else {
+    // Update the user's avatar if they already exist
+    user.avatar = picture;
+    await user.save();
   }
 
   // Generate JWT Token
@@ -281,45 +285,41 @@ const getUserDetails = async (req, res) => {
     }
 
     // Find user by ID from token
-    const user = await User.findById(decoded.userId || decoded.id)
-      .select('-password -__v')
-      .lean();
-
+    const user = await User.findById(decoded.userId);
     if (!user) {
-      return res.status(404).json({ 
-        success: false, 
-        message: "User not found" 
-      });
+      return res.status(404).json({ message: "User not found" });
     }
 
-    // Format comprehensive user data response
-    const userData = {
+    console.log("Found user:", {
       id: user._id,
+      email: user.email,
+      avatar: user.avatar,
+      hasImage: !!user.avatar
+    });
+
+    // Format user data for frontend
+    const userData = {
+      _id: user._id,
       firstName: user.firstName,
       lastName: user.lastName,
       email: user.email,
       username: user.username,
+      image: user.avatar, // For frontend compatibility
+      avatar: user.avatar, // For backward compatibility
       role: user.role,
-      image: user.avatar || null,  // Add image field for frontend compatibility
-      avatar: user.avatar,         // Keep original field for backward compatibility
-      phone: user.phone,
-      address: user.address,
-      createdAt: user.createdAt,
-      updatedAt: user.updatedAt,
-      ...(user.role === 'owner' && {
-        venueDetails: {
-          venueName: user.venueName,
-          venueAddress: user.venueAddress,
-          venuePhone: user.venuePhone,
-          hallImages: user.hallImages
-        }
-      })
+      loyaltyPoints: user.loyaltyPoints,
+      lastPointsClaimed: user.lastPointsClaimed,
+      createdAt: user.createdAt // Add join date
     };
 
-    res.status(200).json({ 
-      success: true, 
-      user: userData 
+    console.log("Sending user data:", {
+      id: userData._id,
+      email: userData.email,
+      image: userData.image,
+      avatar: userData.avatar
     });
+
+    res.json({ user: userData });
   } catch (error) {
     console.error("Error in getUserDetails:", error);
     res.status(500).json({ 
@@ -396,60 +396,6 @@ const approveUser = async (req, res) => {
   }
 }
 
-// Refresh Token
-const refreshToken = async (req, res) => {
-  try {
-    const authHeader = req.headers.authorization;
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return res.status(401).json({ 
-        success: false, 
-        message: "No token provided or invalid format" 
-      });
-    }
-
-    const token = authHeader.split(' ')[1];
-    
-    // Verify the existing token
-    let decoded;
-    try {
-      decoded = jwt.verify(token, process.env.JWT_SECRET);
-    } catch (err) {
-      return res.status(401).json({ 
-        success: false, 
-        message: "Invalid token" 
-      });
-    }
-
-    // Find the user
-    const user = await User.findById(decoded.userId || decoded.id).select('-password');
-    if (!user) {
-      return res.status(404).json({ 
-        success: false, 
-        message: "User not found" 
-      });
-    }
-
-    // Generate new token
-    const newToken = jwt.sign(
-      { userId: user._id, role: user.role },
-      process.env.JWT_SECRET,
-      { expiresIn: '1h' }
-    );
-
-    res.status(200).json({ 
-      success: true,
-      token: newToken,
-      message: 'Token refreshed successfully'
-    });
-  } catch (error) {
-    console.error('Token refresh error:', error);
-    res.status(500).json({ 
-      success: false, 
-      message: "Failed to refresh token" 
-    });
-  }
-};
-
 // Export functions
 module.exports = { 
   register, 
@@ -459,6 +405,5 @@ module.exports = {
   getUserDetails,
   protect,
   approveUser,
-  owner,
-  refreshToken
+  owner 
 };

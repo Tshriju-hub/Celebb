@@ -7,7 +7,7 @@ const cors = require('cors');
 const securityMiddleware = [
   helmet(),
   cors({
-    origin: process.env.CLIENT_URL || 'http://localhost:3000',
+    origin: true, // Allow all origins in development
     credentials: true
   }),
   rateLimit({

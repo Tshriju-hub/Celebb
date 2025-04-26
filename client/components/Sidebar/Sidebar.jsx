@@ -10,7 +10,6 @@ export default function Sidebar() {
   const navItems = [
     { name: "Profile", href: "/user/dashboard" },
     { name: "Loyalty", href: "/user/loyalty" },
-    { name: "News", href: "/user/news" },
   ];
 
   return (

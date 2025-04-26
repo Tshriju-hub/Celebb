@@ -16,8 +16,8 @@ export const getUserDetails = async (session) => {
 
         // Only exchange token if we don't already have one
         if (!session?.user?.token) {
-          const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:5000';
-          const res = await axios.post(`${backendUrl}/api/auth/google`, {
+        const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:5000';
+        const res = await axios.post(`${backendUrl}/api/auth/google`, {
             idToken: idToken
           });
           
@@ -36,50 +36,25 @@ export const getUserDetails = async (session) => {
 
     // Ensure we're using the full backend URL for API calls
     const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:5000';
-    
-    // First try to get user details
     const response = await axios.get(`${backendUrl}/api/auth/user`, {
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${session.user.token}`
+      },
+      validateStatus: function (status) {
+        return status < 500; // Reject only if the status code is greater than or equal to 500
       }
     });
 
-    // If successful, return the user data
-    if (response.status === 200) {
-      return response.data.user;
-    }
-
-    // If we get a 401, try to refresh the token
     if (response.status === 401) {
-      try {
-        const refreshResponse = await axios.post(`${backendUrl}/api/auth/refresh`, {}, {
-          headers: {
-            'Authorization': `Bearer ${session.user.token}`
-          }
-        });
-
-        if (refreshResponse.status === 200) {
-          // Update the token in the session
-          session.user.token = refreshResponse.data.token;
-          
-          // Retry the original request with the new token
-          const retryResponse = await axios.get(`${backendUrl}/api/auth/user`, {
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${refreshResponse.data.token}`
-            }
-          });
-          
-          return retryResponse.data.user;
-        }
-      } catch (refreshError) {
-        console.error('Token refresh failed:', refreshError);
-        throw new Error('Session expired. Please sign in again.');
-      }
+      throw new Error('Session expired. Please sign in again.');
     }
 
-    throw new Error(response.data?.message || 'Failed to fetch user details');
+    if (response.status !== 200) {
+      throw new Error(response.data?.message || 'Failed to fetch user details');
+    }
+    console.log('API response:', response.data);
+    return response.data.user;
   } catch (error) {
     console.error('Error fetching user details:', error);
     console.error('Error details:', error.response?.data);

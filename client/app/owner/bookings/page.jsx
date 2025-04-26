@@ -1,33 +1,23 @@
 "use client";
-
 import { useEffect, useState } from "react";
 import axios from "axios";
 import OwnerSidebar from "@/components/Sidebar/OwnerSidebar";
-import { useSession } from "next-auth/react";
 
 const OwnerBookings = () => {
-  const [bookings, setBookings] = useState({
-    pending: [],
-    approved: [],
-    declined: [],
-  });
+  const [pendingBookings, setPendingBookings] = useState([]);
+  const [approvedBookings, setApprovedBookings] = useState([]);
+  const [declinedBookings, setDeclinedBookings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("pending");
-  const { data: session } = useSession();
-  const userId = session?.user?.id;
 
   const fetchBookings = async () => {
-    if (!userId) return;
-
     try {
-      const res = await axios.get(`http://localhost:5000/api/bookings/owner/${userId}`);
+      const res = await axios.get("http://localhost:5000/api/bookings");
       const allBookings = res.data.bookings || [];
 
-      setBookings({
-        pending: allBookings.filter((b) => b.status === "pending"),
-        approved: allBookings.filter((b) => b.status === "approved"),
-        declined: allBookings.filter((b) => b.status === "declined"),
-      });
+      setPendingBookings(allBookings.filter((b) => b.status === "pending"));
+      setApprovedBookings(allBookings.filter((b) => b.status === "approved"));
+      setDeclinedBookings(allBookings.filter((b) => b.status === "declined"));
     } catch (error) {
       console.error("Error fetching bookings:", error);
     } finally {
@@ -35,31 +25,27 @@ const OwnerBookings = () => {
     }
   };
 
-  const updateStatus = async (id, newStatus) => {
+  const updateStatus = async (id, status) => {
     try {
       await axios.patch(`http://localhost:5000/api/bookings/${id}/status`, {
-        status: newStatus,
+        status,
       });
 
-      setBookings((prev) => {
-        const updatedPending = prev.pending.filter((b) => b._id !== id);
-        const updatedBooking = prev.pending.find((b) => b._id === id);
-        if (!updatedBooking) return prev;
+      setPendingBookings((prev) => prev.filter((b) => b._id !== id));
 
-        return {
-          ...prev,
-          pending: updatedPending,
-          [newStatus]: [...prev[newStatus], { ...updatedBooking, status: newStatus }],
-        };
-      });
+      if (status === "approved") {
+        setApprovedBookings((prev) => [...prev, pendingBookings.find((b) => b._id === id)]);
+      } else if (status === "declined") {
+        setDeclinedBookings((prev) => [...prev, pendingBookings.find((b) => b._id === id)]);
+      }
     } catch (err) {
       console.error("Error updating status:", err);
     }
   };
 
   useEffect(() => {
-    if (userId) fetchBookings();
-  }, [userId]);
+    fetchBookings();
+  }, []);
 
   const renderMenuItems = (menu) => {
     const entries = [];
@@ -68,7 +54,7 @@ const OwnerBookings = () => {
       Object.entries(subSection || {}).forEach(([key, value]) => {
         if (value?.items?.length) {
           entries.push(
-            <p key={`${section}-${key}`}>
+            <p key={section + key}>
               <strong>{section} - {key}:</strong> {value.items.join(", ")}
             </p>
           );
@@ -76,7 +62,7 @@ const OwnerBookings = () => {
           Object.entries(value || {}).forEach(([subKey, subVal]) => {
             if (subVal?.length) {
               entries.push(
-                <p key={`${section}-${key}-${subKey}`}>
+                <p key={section + key + subKey}>
                   <strong>{section} - {key} - {subKey}:</strong> {subVal.join(", ")}
                 </p>
               );
@@ -89,7 +75,7 @@ const OwnerBookings = () => {
     return entries.length ? entries : <p>No menu selected.</p>;
   };
 
-  const BookingCard = ({ booking, showActions }) => (
+  const BookingCard = ({ booking, showActions = false }) => (
     <div className="bg-white rounded-lg shadow-lg p-6 border border-[#7a1313]">
       <h2 className="text-2xl font-semibold text-[#7a1313] mb-3">
         {booking.eventType || "Event Booking"}
@@ -138,12 +124,12 @@ const OwnerBookings = () => {
     </div>
   );
 
-  const renderTab = (bookingsList, showActions, emptyText) => {
-    return bookingsList.length === 0 ? (
+  const renderTab = (bookings, showActions = false, emptyText = "No bookings found.") => {
+    return bookings.length === 0 ? (
       <p className="text-gray-500">{emptyText}</p>
     ) : (
       <div className="grid gap-6">
-        {bookingsList.map((booking) => (
+        {bookings.map((booking) => (
           <BookingCard key={booking._id} booking={booking} showActions={showActions} />
         ))}
       </div>
@@ -166,19 +152,19 @@ const OwnerBookings = () => {
                   : "text-gray-500"
               }`}
             >
-              {tab} ({bookings[tab]?.length || 0})
+              {tab} ({tab === "pending" ? pendingBookings.length : tab === "approved" ? approvedBookings.length : declinedBookings.length})
             </button>
           ))}
         </div>
 
         {loading ? (
           <p className="text-[#7a1313]">Loading...</p>
+        ) : activeTab === "pending" ? (
+          renderTab(pendingBookings, true, "No pending bookings found.")
+        ) : activeTab === "approved" ? (
+          renderTab(approvedBookings, false, "No approved bookings found.")
         ) : (
-          renderTab(
-            bookings[activeTab],
-            activeTab === "pending",
-            `No ${activeTab} bookings found.`
-          )
+          renderTab(declinedBookings, false, "No declined bookings found.")
         )}
       </div>
     </div>

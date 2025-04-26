@@ -1,6 +1,7 @@
 const express = require('express');
 const dotenv = require('dotenv');
 const connectDB = require('./database/config');
+const cors = require('cors');
 const { 
   securityMiddleware, 
   loggingMiddleware, 
@@ -10,6 +11,7 @@ const authRoutes = require('./routes/auth');
 const userRoutes = require('./routes/user');
 const reviewRoutes = require('./routes/reviews');
 const loyaltyRoutes = require('./routes/loyaltyRoutes');
+
 dotenv.config();
 
 // Initialize Express app
@@ -19,6 +21,7 @@ const app = express();
 connectDB();
 
 // Apply middleware
+app.use(cors()); // Enable CORS for all routes
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use([...securityMiddleware, ...loggingMiddleware]);
@@ -35,9 +38,11 @@ app.use('/api/bookings', require('./routes/bookings'));
 app.use('/api/news', require('./routes/news'));
 app.use('/api/loyalty', loyaltyRoutes);
 
+
 app.use('/uploads', express.static('uploads')); // Serve static files from the uploads directory
 
 // Error handling
+
 app.use(errorMiddleware);
 
 // Start server

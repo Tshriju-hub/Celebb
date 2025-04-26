@@ -22,9 +22,6 @@ const uploadToCloudinary = (fileBuffer) => {
 
 const registerOwner = async (req, res) => {
   try {
-    console.log("Received registration request:", req.body);
-    console.log("Files received:", req.files);
-
     const {
       ownerName,
       ownerEmail,
@@ -62,83 +59,49 @@ const registerOwner = async (req, res) => {
     const companyDocs = req.files?.companyRegistration || [];
     const citizenshipDocs = req.files?.ownerCitizenship || [];
 
-    // Check if required files are uploaded
-    if (hallImagesFiles.length === 0) {
-      return res.status(400).json({
-        success: false,
-        message: 'At least one hall image is required',
-        field: 'hallImages'
-      });
-    }
-
-    if (companyDocs.length === 0) {
-      return res.status(400).json({
-        success: false,
-        message: 'Company registration document is required',
-        field: 'companyRegistration'
-      });
-    }
-
-    if (citizenshipDocs.length === 0) {
-      return res.status(400).json({
-        success: false,
-        message: 'Owner citizenship document is required',
-        field: 'ownerCitizenship'
-      });
-    }
-
     // Upload files to Cloudinary and store the URLs
-    try {
-      const hallImages = await Promise.all(
-        hallImagesFiles.map((file) => uploadToCloudinary(file.buffer))
-      );
-      const companyRegistration = await Promise.all(
-        companyDocs.map((file) => uploadToCloudinary(file.buffer))
-      );
-      const ownerCitizenship = await Promise.all(
-        citizenshipDocs.map((file) => uploadToCloudinary(file.buffer))
-      );
+    const hallImages = await Promise.all(
+      hallImagesFiles.map((file) => uploadToCloudinary(file.buffer))
+    );
+    const companyRegistration = await Promise.all(
+      companyDocs.map((file) => uploadToCloudinary(file.buffer))
+    );
+    const ownerCitizenship = await Promise.all(
+      citizenshipDocs.map((file) => uploadToCloudinary(file.buffer))
+    );
 
-      const registration = new Registration({
-        ownerName,
-        ownerEmail,
-        ownerPhone,
-        name,
-        address,
-        phone,
-        established,
-        advancePayment,
-        spacePreference,
-        capacity,
-        numberOfHalls,
-        hallImages,
-        foodSilverPrice,
-        foodGoldPrice,
-        foodDiamondPrice,
-        makeupPrice,
-        decorationPrice,
-        entertainmentPrice,
-        companyRegistration,
-        ownerCitizenship,
-        owner,
-        status: 'pending'
-      });
+    const registration = new Registration({
+      ownerName,
+      ownerEmail,
+      ownerPhone,
+      name,
+      address,
+      phone,
+      established,
+      advancePayment,
+      spacePreference,
+      capacity,
+      numberOfHalls,
+      hallImages,
+      foodSilverPrice,
+      foodGoldPrice,
+      foodDiamondPrice,
+      makeupPrice,
+      decorationPrice,
+      entertainmentPrice,
+      companyRegistration,
+      ownerCitizenship,
+      owner,
+      status
+    });
 
-      await registration.save();
+    await registration.save();
 
-      res.status(201).json({
-        success: true,
-        message: 'Owner registration submitted successfully!',
-        registrationId: registration._id
-      });
-    } catch (uploadError) {
-      console.error('File upload error:', uploadError);
-      return res.status(500).json({
-        success: false,
-        message: 'Error uploading files. Please try again with smaller files.',
-        error: uploadError.message
-      });
-    }
+    res.status(201).json({
+      success: true,
+      message: 'Owner registration submitted successfully!',
+      registrationId: registration._id
+    });
   } catch (error) {
     console.error('Owner registration error:', error);
     res.status(500).json({

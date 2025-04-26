@@ -8,11 +8,9 @@ import {
 import Image from 'next/image';
 import Link from 'next/link';
 import axios from 'axios';
-import { useRouter } from 'next/navigation';
 
 export default function RegisterOwnerPage() {
   const { data: session, status } = useSession();
-  const router = useRouter();
 
   const [formData, setFormData] = useState({
     firstName: '',
@@ -28,10 +26,10 @@ export default function RegisterOwnerPage() {
 
   // Redirect if already authenticated
   useEffect(() => {
-    if (status === 'authenticated') {
+    if(session.user.role === 'owner'){
       window.location.href = '/'; // or router.push('/')
     }
-  }, [status, router]);
+  }, [status]);
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -62,6 +60,7 @@ export default function RegisterOwnerPage() {
       });
 
       if (response.data.success) {
+        localStorage.setItem('token', response.data.token); // Store token in local storage
         const result = await signIn('credentials', {
           redirect: false,
           email,
@@ -69,10 +68,12 @@ export default function RegisterOwnerPage() {
         });
 
         if (result.ok) {
-          router.push('/Registration');
+          window.location.href = '/';
         } else {
-          setError(result.error || 'Login failed after registration');
+          setError( result.error ||'Login failed after registration');
         }
+      } else {
+        setError(response.data.message || 'Registration failed');
       }
     } catch (err) {
       setError(err.response?.data?.message || 'An error occurred during registration');

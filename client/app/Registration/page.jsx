@@ -55,31 +55,11 @@ export default function PartyPalaceRegistration() {
 
   const handleFileUpload = (e, field) => {
     const files = Array.from(e.target.files);
-    
-    // Check file sizes
-    const maxSize = 20 * 1024 * 1024; // 20MB
-    const oversizedFiles = files.filter(file => file.size > maxSize);
-    
-    if (oversizedFiles.length > 0) {
-      toast.error(`Some files exceed the 20MB size limit. Please reduce their size.`);
-      return;
-    }
-    
     setFormData((prev) => ({ ...prev, [field]: files }));
   };
 
   const handleImageUpload = (e) => {
     const files = Array.from(e.target.files);
-    
-    // Check file sizes
-    const maxSize = 20 * 1024 * 1024; // 20MB
-    const oversizedFiles = files.filter(file => file.size > maxSize);
-    
-    if (oversizedFiles.length > 0) {
-      toast.error(`Some images exceed the 20MB size limit. Please reduce their size.`);
-      return;
-    }
-    
     setFormData((prev) => ({ ...prev, hallImages: files }));
   };
 
@@ -109,49 +89,30 @@ export default function PartyPalaceRegistration() {
   const goToStep = (stepNumber) => setStep(stepNumber);
 
   const handleSubmit = async () => {
+    const numericFields = [
+      "advancePayment",
+      "capacity",
+      "numberOfHalls",
+      "foodSilverPrice",
+      "foodGoldPrice",
+      "foodDiamondPrice",
+      "makeupPrice",
+      "decorationPrice",
+      "entertainmentPrice",
+    ];
+
+    numericFields.forEach((field) => {
+      if (formData[field]) {
+        formData[field] = Number(formData[field]);
+      }
+    });
+
+    if (!formData.ownerName || !formData.ownerEmail || !formData.name || !formData.owner) {
+      toast.error("Missing required owner or venue details.");
+      return;
+    }
+
     try {
-      // Validate required fields
-      if (!formData.ownerName || !formData.ownerEmail || !formData.name || !formData.phone || !formData.established || !formData.advancePayment) {
-        toast.error("Please fill in all required fields.");
-        return;
-      }
-
-      // Validate files
-      if (formData.hallImages.length === 0) {
-        toast.error("Please upload at least one hall image.");
-        return;
-      }
-
-      if (formData.companyRegistration.length === 0) {
-        toast.error("Please upload company registration document.");
-        return;
-      }
-
-      if (formData.ownerCitizenship.length === 0) {
-        toast.error("Please upload owner citizenship document.");
-        return;
-      }
-
-      // Convert numeric fields to numbers
-      const numericFields = [
-        "advancePayment",
-        "capacity",
-        "numberOfHalls",
-        "foodSilverPrice",
-        "foodGoldPrice",
-        "foodDiamondPrice",
-        "makeupPrice",
-        "decorationPrice",
-        "entertainmentPrice",
-      ];
-
-      numericFields.forEach((field) => {
-        if (formData[field]) {
-          formData[field] = Number(formData[field]);
-        }
-      });
-
-      // Create FormData object
       const data = new FormData();
 
       // Append non-file fields
@@ -159,8 +120,7 @@ export default function PartyPalaceRegistration() {
         if (
           key !== "hallImages" &&
           key !== "companyRegistration" &&
-          key !== "ownerCitizenship" &&
-          key !== "status" // Exclude status as we'll set it separately
+          key !== "ownerCitizenship"
         ) {
           data.append(key, value);
         }
@@ -179,12 +139,7 @@ export default function PartyPalaceRegistration() {
         data.append("ownerCitizenship", file);
       });
 
-      // Add role and status as single values
       data.append("role", "owner");
-      data.append("status", "pending"); // Set status as a single string value
-
-      // Log the FormData for debugging
-      console.log("Submitting form data:", Object.fromEntries(data.entries()));
 
       const response = await axios.post(
         "http://localhost:5000/api/auth/register-owner",
@@ -205,8 +160,7 @@ export default function PartyPalaceRegistration() {
       }
     } catch (error) {
       console.error("Error submitting registration:", error);
-      const errorMessage = error.response?.data?.message || "An error occurred while submitting the registration.";
-      toast.error(errorMessage);
+      toast.error("An error occurred while submitting the registration.");
     }
   };
 

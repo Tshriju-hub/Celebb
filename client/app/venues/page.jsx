@@ -24,14 +24,10 @@ export default function ViewVenues() {
         setFilteredVenues(response.data);
       } catch (error) {
         console.error("Error fetching venues:", error);
-        
-        // Handle rate limiting error
+
         if (error.response && error.response.status === 429) {
-          // Show a user-friendly error message
           alert("We're experiencing high traffic. Please try again in a few moments.");
-          
-          // Set some default venues to display while waiting
-          setAllVenues([
+          const placeholder = [
             {
               _id: "placeholder1",
               name: "Venue Loading...",
@@ -50,27 +46,9 @@ export default function ViewVenues() {
               advancePayment: "Loading",
               hallImages: ["/Image/venues/venue2.png"]
             }
-          ]);
-          setFilteredVenues([
-            {
-              _id: "placeholder1",
-              name: "Venue Loading...",
-              ownerName: "Please wait",
-              capacity: "Loading",
-              address: "Loading venue information",
-              advancePayment: "Loading",
-              hallImages: ["/Image/venues/venue1.png"]
-            },
-            {
-              _id: "placeholder2",
-              name: "Venue Loading...",
-              ownerName: "Please wait",
-              capacity: "Loading",
-              address: "Loading venue information",
-              advancePayment: "Loading",
-              hallImages: ["/Image/venues/venue2.png"]
-            }
-          ]);
+          ];
+          setAllVenues(placeholder);
+          setFilteredVenues(placeholder);
         }
       }
     };
@@ -101,11 +79,11 @@ export default function ViewVenues() {
 
   return (
     <MainLayout>
-      <div className="min-h-screen bg-[#E9E0DC] px-4 sm:px-8 md:px-12 py-20 flex flex-col gap-8 items-center">
+      <div className="min-h-screen bg-[#E9E0DC] px-4 sm:px-8 md:px-12 py-20 flex flex-col items-center">
+        <div className="flex flex-col lg:flex-row gap-8 w-full max-w-6xl">
 
-        <div className="flex flex-col lg:flex-row gap-8 w-full max-w-6xl mt-10">
-          {/* Filter Section */}
-          <div className="lg:w-auto w-full max-w-[280px] bg-white rounded-2xl shadow-xl p-6 space-y-6 sticky top-24 max-h-[80vh] overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300">
+          {/* Filter Box - Sticky */}
+          <div className="lg:w-auto w-full max-w-[280px] bg-white rounded-2xl shadow-xl p-6 space-y-6 sticky top-24 h-fit">
             <div className="flex items-center gap-2 text-[#7a1313] text-xl font-semibold">
               <Filter className="w-6 h-6" /> Filters
             </div>
@@ -127,24 +105,20 @@ export default function ViewVenues() {
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Advance Payment (Rs)</label>
               <div className="flex gap-4">
-                <div className="flex-1">
-                  <input
-                    type="number"
-                    className="w-full border rounded-xl p-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#7a1313]"
-                    placeholder="Min"
-                    value={priceFilter.min}
-                    onChange={(e) => setPriceFilter({ ...priceFilter, min: e.target.value })}
-                  />
-                </div>
-                <div className="flex-1">
-                  <input
-                    type="number"
-                    className="w-full border rounded-xl p-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#7a1313]"
-                    placeholder="Max"
-                    value={priceFilter.max}
-                    onChange={(e) => setPriceFilter({ ...priceFilter, max: e.target.value })}
-                  />
-                </div>
+                <input
+                  type="number"
+                  className="w-full border rounded-xl p-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#7a1313]"
+                  placeholder="Min"
+                  value={priceFilter.min}
+                  onChange={(e) => setPriceFilter({ ...priceFilter, min: e.target.value })}
+                />
+                <input
+                  type="number"
+                  className="w-full border rounded-xl p-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#7a1313]"
+                  placeholder="Max"
+                  value={priceFilter.max}
+                  onChange={(e) => setPriceFilter({ ...priceFilter, max: e.target.value })}
+                />
               </div>
             </div>
 
@@ -156,10 +130,9 @@ export default function ViewVenues() {
             </button>
           </div>
 
-          {/* Venues Section */}
-          <div className="lg:w-3/4 space-y-8">
-
-            {/* Sticky Search Bar */}
+          {/* Right Side - Search & Scrollable Venue Cards */}
+          <div className="lg:w-3/4 flex flex-col space-y-4">
+            {/* Sticky Search */}
             <div className="sticky top-20 z-10 w-full flex justify-center bg-[#E9E0DC] pb-2">
               <form
                 onSubmit={(e) => {
@@ -187,49 +160,67 @@ export default function ViewVenues() {
               </form>
             </div>
 
-            {filteredVenues.length > 0 ? (
-              filteredVenues.map((registration, index) => (
-                <div key={registration._id} className="flex flex-col md:flex-row bg-white rounded-2xl shadow-lg overflow-hidden">
-                  {/* Text Section */}
-                  <div className="p-6 md:p-8 md:w-2/3">
-                    <h2 className="text-2xl font-semibold text-gray-900">{registration.name}</h2>
-                    <p className="text-gray-700 mt-3 leading-relaxed text-sm sm:text-base">
-                      <span className="font-medium">Owner Name:</span> {registration.ownerName} |
-                      <span className="font-medium"> Capacity:</span> {registration.capacity} people |
-                      <span className="font-medium"> Location:</span> {registration.address} |
-                      <span className="font-medium"> Advance Payment:</span> Rs. {registration.advancePayment}
-                    </p>
-
-                    <div className="mt-6">
-                      <button
-                        onClick={() => handleDetails(registration._id)}
-                        className="border border-gray-500 text-gray-700 px-6 py-2 rounded-xl text-sm sm:text-base hover:bg-gray-100 transition-all duration-300"
-                      >
-                        View Details
-                      </button>
+            {/* Scrollable Cards */}
+            <div className="overflow-y-auto max-h-[calc(100vh-220px)] pr-2 space-y-8 custom-scrollbar">
+              {filteredVenues.length > 0 ? (
+                filteredVenues.map((registration) => (
+                  <div key={registration._id} className="flex flex-col md:flex-row bg-white rounded-2xl shadow-lg overflow-hidden">
+                    <div className="p-6 md:p-8 md:w-2/3">
+                      <h2 className="text-2xl font-semibold text-gray-900">{registration.name}</h2>
+                      <p className="text-gray-700 mt-3 leading-relaxed text-sm sm:text-base">
+                        <span className="font-medium">Owner Name:</span> {registration.ownerName} |
+                        <span className="font-medium"> Capacity:</span> {registration.capacity} people |
+                        <span className="font-medium"> Location:</span> {registration.address} |
+                        <span className="font-medium"> Advance Payment:</span> Rs. {registration.advancePayment}
+                      </p>
+                      <div className="mt-6">
+                        <button
+                          onClick={() => handleDetails(registration._id)}
+                          className="border border-gray-500 text-gray-700 px-6 py-2 rounded-xl text-sm sm:text-base hover:bg-gray-100 transition-all duration-300"
+                        >
+                          View Details
+                        </button>
+                      </div>
                     </div>
-                  </div>
 
-                  <div className="relative md:w-1/3 h-48 md:h-auto">
-                    <div className="absolute inset-0">
+                    <div className="relative md:w-1/3 h-48 md:h-auto overflow-hidden group">
                       <img
                         src={registration.hallImages?.[0] || "/Image/venues/venue1.png"}
                         alt={registration.name}
-                        className="object-cover w-full h-full clip-diagonal rounded-tr-2xl"
+                        className="object-cover w-full h-full clip-diagonal group-hover:scale-110 transition-transform duration-500 ease-in-out rounded-tr-2xl"
                       />
                     </div>
                   </div>
-                </div>
-              ))
-            ) : (
-              <p className="text-center text-gray-600">No venues found.</p>
-            )}
+                ))
+              ) : (
+                <p className="text-center text-gray-600">No venues found.</p>
+              )}
+            </div>
           </div>
         </div>
 
         <style jsx global>{`
           .clip-diagonal {
             clip-path: polygon(25% 0, 100% 0, 100% 100%, 0% 100%);
+          }
+
+          /* Custom Scrollbar */
+          .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+          }
+
+          .custom-scrollbar::-webkit-scrollbar-track {
+            background: transparent;
+          }
+
+          .custom-scrollbar::-webkit-scrollbar-thumb {
+            background-color: rgba(0, 0, 0, 0.2);
+            border-radius: 20px;
+          }
+
+          .custom-scrollbar {
+            scrollbar-width: thin;
+            scrollbar-color: rgba(0, 0, 0, 0.2) transparent;
           }
         `}</style>
       </div>

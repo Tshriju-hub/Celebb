@@ -1,9 +1,12 @@
 "use client";
 import React, { useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
+import { motion, useAnimation } from "framer-motion";
 
 export default function Home() {
   const [isVisible, setIsVisible] = useState(false);
   const sectionRef = useRef(null);
+  const router = useRouter();
 
   useEffect(() => {
     const observer = new IntersectionObserver(
@@ -27,20 +30,48 @@ export default function Home() {
     };
   }, []);
 
+  const services = [
+    {
+      title: "Venue",
+      subtitle: "Banquet, Party Palace, Hotel",
+      image: "/Image/image3.png",
+      bgColor: "#556B2F",
+      path: "/venues",
+    },
+    {
+      title: "Makeup",
+      subtitle: "Bridal Makeup, Family Makeup",
+      image: "/Image/image2.png",
+      bgColor: "#800000",
+      path: "/makeup",
+    },
+    {
+      title: "Decor",
+      subtitle: "Stage, Mandap",
+      image: "/Image/image4.png",
+      bgColor: "#1E3A8A",
+      path: "/decor",
+    },
+    {
+      title: "Entertainment",
+      subtitle: "DJ, Music, Microphone",
+      image: "/Image/image1.png",
+      bgColor: "#1E40AF",
+      path: "/entertainment",
+    },
+  ];
+
   return (
-    <div className="flex flex-col w-full bg-gray-100 mt-24">
+    <div className="flex flex-col w-full bg-gray-100">
       {/* Header Section */}
-      <div className="flex flex-col md:flex-row items-center md:items-start justify-between max-w-6xl mx-auto gap-6">
-        {/* Left Section: Heading */}
+      <div className="flex flex-col md:flex-row items-center md:items-start justify-between max-w-6xl mx-auto gap-6 mt-8">
         <div className="md:w-1/2">
           <h1 className="text-3xl md:text-4xl font-semibold text-gray-800">
-            All-in-One Expertise:{" "}
+            All-in-One Expertise:
             <br />
             <span className="text-[#6D0C0E]">Your Forever Service Partner</span>
           </h1>
         </div>
-
-        {/* Right Section: Description */}
         <div className="md:w-1/2">
           <p className="text-gray-600">
             A celebration is a beautiful journey, a joyous moment where dreams
@@ -54,56 +85,68 @@ export default function Home() {
       {/* Services Section */}
       <div
         ref={sectionRef}
-        className={`grid grid-cols-1 md:grid-cols-2 gap-6 px-8 py-12 max-w-6xl mx-auto transition-opacity duration-1000 ${
+        className={`grid grid-cols-1 md:grid-cols-2 gap-8 px-8 py-12 max-w-6xl mx-auto transition-opacity duration-1000 ${
           isVisible ? "opacity-100" : "opacity-0"
         }`}
       >
-        {[
-          {
-            title: "Venue ",
-            subtitle: "Banquet, Party Palace, Hotel",
-            image: "/Image/image1.png",
-            bgColor: "bg-[#556B2F]",
-          },
-          {
-            title: "Makeup ",
-            subtitle: "Bridal Makeup, Family Makeup",
-            image: "/Image/image2.png",
-            bgColor: "bg-[#800000]",
-          },
-          {
-            title: "Decor ",
-            subtitle: "Stage, Mandap",
-            image: "/Image/image3.png",
-            bgColor: "bg-[#1E3A8A]",
-          },
-          {
-            title: "Entertainment ",
-            subtitle: "DJ, Music, Microphone",
-            image: "/Image/image1.png",
-            bgColor: "bg-[#1E40AF]",
-          },
-        ].map((service, index) => (
-          <div
-            key={index}
-            className={`flex overflow-hidden rounded-lg shadow-lg text-white ${service.bgColor} relative`}
-          >
-            {/* Left Text Section */}
-            <div className="p-6 w-1/2 flex flex-col justify-center">
-              <h2 className="text-2xl font-bold">{service.title}</h2>
-              <p className="mt-2 text-sm">{service.subtitle}</p>
-            </div>
+        {services.map((service, index) => {
+          const controls = useAnimation();
 
-            {/* Right Image Section */}
-            <div className="w-1/2 relative">
-              <img
-                src={service.image}
-                alt={service.title}
-                className="w-full h-full object-cover"
-              />
-            </div>
-          </div>
-        ))}
+          return (
+            <motion.div
+              key={index}
+              className="flex w-full min-h-[260px] overflow-hidden rounded-2xl shadow-xl text-white relative cursor-pointer transition-transform"
+              style={{ backgroundColor: service.bgColor }}
+              initial={{ opacity: 0, y: 50 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: index * 0.2, duration: 0.6 }}
+              onClick={() => router.push(service.path)}
+              onHoverStart={() =>
+                controls.start({
+                  width: "50%",
+                  transition: { duration: 0.4, ease: "easeInOut" },
+                })
+              }
+              onHoverEnd={() =>
+                controls.start({
+                  width: "30%",
+                  transition: { duration: 0.4, ease: "easeInOut" },
+                })
+              }
+            >
+              {/* Left Text Section */}
+              <div className="p-8 w-1/2 flex flex-col justify-center z-10">
+                <motion.h2
+                  className="text-3xl font-bold hover:underline underline-offset-4 decoration-white transition duration-200"
+                  whileHover={{ scale: 1.05 }}
+                >
+                  {service.title}
+                </motion.h2>
+                <p className="mt-2 text-sm">{service.subtitle}</p>
+              </div>
+
+              {/* Right Image Section */}
+              <div className="w-1/2 relative overflow-hidden">
+                <img
+                  src={service.image}
+                  alt={service.title}
+                  className="w-full h-full object-cover"
+                />
+                {/* Animated Diagonal Overlay */}
+                <motion.div
+                  className="absolute top-0 left-0 h-full"
+                  animate={controls}
+                  initial={{ width: "30%" }}
+                  style={{
+                    backgroundColor: `${service.bgColor}B3`,
+                    clipPath: "polygon(0 0, 100% 0, 60% 100%, 0% 100%)",
+                    pointerEvents: "none",
+                  }}
+                />
+              </div>
+            </motion.div>
+          );
+        })}
       </div>
     </div>
   );

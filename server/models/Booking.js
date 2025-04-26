@@ -3,44 +3,149 @@ const { Schema } = mongoose;
 
 const bookingSchema = new Schema(
   {
-    user: {
+    owner:
+    {
       type: mongoose.Schema.Types.ObjectId,
-      required: true,
-      ref: 'User'
-    },
-    service: {
-      type: String,
-      required: [true, 'Please specify the service']
-    },
-    date: {
-      type: Date,
-      required: [true, 'Please specify the booking date']
-    },
-    time: {
-      type: String,
-      required: [true, 'Please specify the booking time']
+      ref: 'User',
     },
     status: {
       type: String,
-      required: true,
-      enum: ['pending', 'confirmed', 'cancelled', 'completed'],
+      enum: ['pending', 'approved', 'declined'],
       default: 'pending'
     },
-    advancePayment: {
-      type: Number,
-      required: [true, 'Please specify the advance payment amount']
+    eventType: {
+      type: String,
+      required: false,
     },
-    pointsEarned: {
-      type: Number,
-      default: 0
+    eventTime: {
+      type: String,
+      required: false,
     },
-    pointsRedeemed: {
+    totalGuests: {
       type: Number,
-      default: 0
+      required: false,
+      min: 1, // Minimum number of guests
+    },
+    date: {
+      type: Date,
+      required: false,
+    },
+    hall: {
+      type: [String],
+      default: [],
+      required: false,
+    },
+    catering: {
+      type: [String],
+      default: [],
+      required: false,
+    },
+
+    menu: {
+      starters: {
+        veg: {
+          items: { type: [String], default: [] },
+        },
+        nonVeg: {
+          chicken: { type: [String], default: [] },
+          fish: { type: [String], default: [] },
+        },
+      },
+      mainCourse: {
+        rice: {
+          items: { type: [String], default: [] },
+        },
+        rotiNaanNoodlesPasta: {
+          items: { type: [String], default: [] },
+        },
+        veg: {
+          items: { type: [String], default: [] },
+        },
+        vegetables: {
+          items: { type: [String], default: [] },
+        },
+        nonVeg: {
+          mutton: { type: [String], default: [] },
+          chicken: { type: [String], default: [] },
+          fish: { type: [String], default: [] },
+        },
+      },
+      pickle: {
+        veg: {
+          items: { type: [String], default: [] },
+        },
+        fermented: {
+          items: { type: [String], default: [] },
+        },
+      },
+      salads: {
+        veg: {
+          items: { type: [String], default: [] },
+        },
+      },
+      dessert: {
+        sweets: {
+          flourBased: { type: [String], default: [] },
+          milkBased: { type: [String], default: [] },
+        },
+        dairy: {
+          items: { type: [String], default: [] },
+        },
+        ice: {
+          items: { type: [String], default: [] },
+        },
+      },
+      beverages: {
+        coldDrinks: {
+          items: { type: [String], default: [] },
+        },
+
+        teaCoffee: { items: { type: [String], default: [] } },
+
+        alcoholicDrinks: {
+          beers: { type: [String], default: [] },
+          whiskey: { type: [String], default: [] },
+        },
+      },
+    },
+
+    menuInstructions: {
+      type: String,
+      required: false,
+    },
+
+    fullName: {
+      type: String,
+      required: false,
+    },
+    email: {
+      type: String,
+      required: false,
+      match: /^\S+@\S+\.\S+$/, // Email format validation
+    },
+    phone1: {
+      type: String,
+      required: false,
+      match: /^[0-9]{10}$/, // Phone number format validation
+    },
+    phone2: {
+      type: String,
+      required: false,
+      match: /^[0-9]{10}$/, // Phone number format validation
+    },
+    address: {
+      type: String,
+      required: false,
+    },
+    loyaltyPointsRedeemed: {
+      type: Number,
+      default: 0,
+      min: 0
     },
     discountAmount: {
       type: Number,
-      default: 0
+      default: 0,
+      min: 0
     }
   },
   { timestamps: true }

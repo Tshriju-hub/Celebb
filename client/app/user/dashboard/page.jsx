@@ -51,6 +51,14 @@ export default function UserDashboardProfile() {
     return new Date(dateStr).toLocaleDateString(undefined, options);
   };
 
+  const getUsername = () => {
+    if (!userDetails) return "";
+    if (userDetails.provider === "google") {
+      return userDetails.email?.split('@')[0] || "unknown";
+    }
+    return userDetails.username || userDetails.email?.split('@')[0] || "unknown";
+  };
+
   if (status === "loading" || loading) {
     return (
       <div className="flex items-center justify-center h-screen bg-gray-100">
@@ -76,13 +84,24 @@ export default function UserDashboardProfile() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Profile Image */}
           <div className="bg-white p-6 rounded-2xl shadow flex flex-col items-center text-center">
-            <div className="relative w-40 h-40 rounded-full overflow-hidden border-4 border-[#7a1313] shadow">
-              {userDetails.image ? (
-                <img src={userDetails.image} alt="Profile" className="w-full h-full object-cover" />
+            <div className="relative w-24 h-24 rounded-full overflow-hidden border-4 border-[#7a1313] shadow">
+              {(userDetails.image || userDetails.avatar) ? (
+                <img 
+                  src={userDetails.image || userDetails.avatar} 
+                  alt="Profile" 
+                  className="w-full h-full object-cover"
+                  onError={(e) => {
+                    e.target.style.display = 'none';
+                    e.target.parentElement.innerHTML = `
+                      <div class="w-full h-full bg-gray-200 flex items-center justify-center text-3xl text-gray-500 font-bold">
+                        ${userDetails.firstName?.[0] || ''}${userDetails.lastName?.[0] || ''}
+                      </div>
+                    `;
+                  }}
+                />
               ) : (
-                <div className="w-full h-full bg-gray-200 flex items-center justify-center text-5xl text-gray-500 font-bold">
-                  {userDetails.firstName?.[0]}
-                  {userDetails.lastName?.[0]}
+                <div className="w-full h-full bg-gray-200 flex items-center justify-center text-3xl text-gray-500 font-bold">
+                  {userDetails.firstName?.[0] || ''}{userDetails.lastName?.[0] || ''}
                 </div>
               )}
             </div>
@@ -93,6 +112,7 @@ export default function UserDashboardProfile() {
               {userDetails.firstName} {userDetails.lastName}
             </h2>
             <p className="text-gray-500">{userDetails.email}</p>
+            <p className="text-gray-500 mt-1">@{getUsername()}</p>
             <p className="text-sm text-gray-400 mt-1 italic">
               Joined on {formatDate(userDetails.createdAt)}
             </p>
@@ -107,7 +127,7 @@ export default function UserDashboardProfile() {
               <div>
                 <p className="mb-2">
                   <span className="font-medium">Username:</span>{" "}
-                  {userDetails.username || "N/A"}
+                  {getUsername()}
                 </p>
                 <p className="mb-2">
                   <span className="font-medium">First Name:</span>{" "}
@@ -122,20 +142,7 @@ export default function UserDashboardProfile() {
                 </p>
               </div>
               <div>
-                <p className="mb-2">
-                  <span className="font-medium">Loyalty Points:</span>{" "}
-                  {userDetails.loyaltyPoints ?? 0}
-                </p>
-                <p className="mb-2">
-                  <span className="font-medium">Status:</span>{" "}
-                  <span
-                    className={`inline-block px-2 py-1 text-xs rounded-full ${
-                      userDetails.isActive ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"
-                    }`}
-                  >
-                    {userDetails.isActive ? "Active" : "Inactive"}
-                  </span>
-                </p>
+                {/* Optional additional profile info */}
               </div>
             </div>
           </div>

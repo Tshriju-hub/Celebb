@@ -38,7 +38,7 @@ export default function NewsCarousel() {
   if (news.length === 0) return <div className="text-center py-10">No news available</div>;
 
   return (
-    <div className="bg-gray-100 py-10 px-5 text-center">
+    <div className="bg-[#f5efeb] py-10 px-5 text-center">
       <h2 className="text-xl font-semibold text-gray-800">
         Stay Informed, Stay Inspired: Latest News and Exclusive Offers for
       </h2>

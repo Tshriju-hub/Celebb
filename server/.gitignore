@@ -21,6 +21,7 @@
 *.pem
 
 /.wwebjs_auth
+/.wwebjs_auth\session
 /.wwebjs_cache
 
 # debug

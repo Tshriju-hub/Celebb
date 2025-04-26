@@ -1,33 +1,29 @@
-const { AuthStrategy } = require('whatsapp-web.js');
+const { LocalAuth } = require('whatsapp-web.js');
+const fs = require('fs');
+const path = require('path');
 
-class CustomAuth extends AuthStrategy {
+class CustomAuth extends LocalAuth {
     constructor() {
         super();
-        this.clientId = process.env.WHATSAPP_CLIENT_ID;
-        this.clientSecret = process.env.WHATSAPP_CLIENT_SECRET;
+        this.sessionFile = path.join(__dirname, 'session.json');
     }
 
-    async beforeAuthInitialize() {
-        // Any setup before authentication
-        console.log('Initializing WhatsApp authentication...');
+    async getSession() {
+        if (fs.existsSync(this.sessionFile)) {
+            const sessionData = fs.readFileSync(this.sessionFile);
+            return JSON.parse(sessionData);
+        }
+        return null;
     }
 
-    async onAuthEvent() {
-        // Handle authentication events
-        console.log('WhatsApp authentication event occurred');
+    async saveSession(session) {
+        fs.writeFileSync(this.sessionFile, JSON.stringify(session));
     }
 
-    async getAuthEvent() {
-        // Return authentication event data
-        return {
-            clientId: this.clientId,
-            clientSecret: this.clientSecret
-        };
-    }
-
-    async afterAuthInitialize() {
-        // Any cleanup after authentication
-        console.log('WhatsApp authentication completed');
+    async deleteSession() {
+        if (fs.existsSync(this.sessionFile)) {
+            fs.unlinkSync(this.sessionFile);
+        }
     }
 }
 

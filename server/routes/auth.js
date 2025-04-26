@@ -31,7 +31,4 @@ router.get('/registrations', ownerController.getVenues); // New route for fetchi
 router.post('/registrations/owner', ownerController.getVenuesforOwner); // New route for fetching registrations by owner ID
 router.post('/approve-venue', ownerController.approveVenue); // New route for approving a venue
 
-// Add refresh token route
-router.post('/refresh', authController.refreshToken);
-
 module.exports = router;

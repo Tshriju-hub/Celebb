@@ -26,13 +26,13 @@ const VendorJoin = () => {
           {userRole === 'owner' ? (
             <Link href="/Registration">
               <button className="w-60 border border-[#8f1919] bg-white text-[#8f1919] font-semibold py-3 rounded-md text-lg hover:bg-[#8f1919] hover:text-white transition-all">
-                Manage Venue
+                Join Now
               </button>
             </Link>
           ) : (
-            <Link href="/register-owner" prefetch={true}>
+            <Link href="/register-owner">
               <button className="w-60 border border-[#8f1919] bg-white text-[#8f1919] font-semibold py-3 rounded-md text-lg hover:bg-[#8f1919] hover:text-white transition-all">
-                Register Venue
+                Join Now
               </button>
             </Link>
           )}
