@@ -5,6 +5,7 @@ const customAuth = require("../lib/customAuth.js");
 const { Client } = pkg;
 const User = require("../models/User");
 const LoyaltyHistory = require("../models/LoyaltyHistory");
+const mongoose = require("mongoose");
 
 const client = new Client({
   authStrategy: new customAuth(),
@@ -54,7 +55,7 @@ const sendMessage = async (phoneNumber, message) => {
 const createBooking = async (req, res) => {
   try {
     const {
-      owner, // This is the Google ID
+      owner, // This could be either Google ID or MongoDB ObjectId
       eventType,
       eventTime,
       totalGuests,
@@ -96,11 +97,20 @@ const createBooking = async (req, res) => {
       return res.status(400).json({ message: "Total guests must be at least 1" });
     }
 
-    // Find user by Google ID
-    const user = await User.findOne({ googleId: owner });
+    // Find user by either Google ID or MongoDB ObjectId
+    let user;
+    if (mongoose.Types.ObjectId.isValid(owner)) {
+      user = await User.findById(owner);
+    } else {
+      user = await User.findOne({ googleId: owner });
+    }
+
     if (!user) {
+      console.log('Server: User not found with ID:', owner);
       return res.status(404).json({ message: "User not found" });
     }
+
+    console.log('Server: Found user:', user._id);
 
     // Handle loyalty points redemption
     let discountAmount = 0;

@@ -4,7 +4,7 @@ import MainLayout from "@/components/layouts/mainLayout";
 import React, { useState } from "react";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-import GoogleMap from "@/components/googleMap/google";
+import UserLeafletMap from "@/components/googleMap/leaflet";
 import { Mail, MapPin, Phone, Clock } from "lucide-react";
 
 export default function Contact() {
@@ -134,8 +134,8 @@ export default function Contact() {
               </button>
             </form>
             {/* Map */}
-            <div className="w-full h-96">
-              <GoogleMap />
+            <div className="w-full h-96 rounded-lg overflow-hidden shadow-lg">
+              <UserLeafletMap />
             </div>
           </div>
         </div>

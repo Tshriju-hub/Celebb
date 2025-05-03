@@ -15,9 +15,19 @@ import {
   FaRegStar,
   FaHeart,
   FaReply,
+  FaMapMarkerAlt,
+  FaPhone,
+  FaCalendarAlt,
+  FaUsers,
+  FaBuilding,
+  FaMoneyBillWave,
+  FaUtensils,
+  FaPalette,
+  FaMusic,
 } from "react-icons/fa";
 import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+import VenueMap from "@/components/googleMap/venueMap";
 
 export default function VenueDetailPage() {
   const { id } = useParams();
@@ -32,6 +42,7 @@ export default function VenueDetailPage() {
   const [replyText, setReplyText] = useState({});
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const [showReplyInput, setShowReplyInput] = useState({});
 
   const LoginPromptModal = ({ visible, onClose }) => {
     if (!visible) return null;
@@ -119,10 +130,20 @@ export default function VenueDetailPage() {
   };
   
 
+  const handleRatingClick = (star) => {
+    setRating(star);
+  };
+
   const handleSubmitReview = async () => {
     if (!user) return setShowLoginModal(true);
-    if (!comment)
-      return toast.error("Please add a comment.", { position: "top-center" });
+    if (!rating) {
+      toast.error("Please select a rating", { position: "top-center" });
+      return;
+    }
+    if (!comment) {
+      toast.error("Please add a comment", { position: "top-center" });
+      return;
+    }
 
     try {
       await axios.post(
@@ -138,6 +159,7 @@ export default function VenueDetailPage() {
           },
         }
       );
+      toast.success("Review submitted successfully!", { position: "top-center" });
       setComment("");
       setRating(0);
       const updated = await axios.get(
@@ -167,8 +189,12 @@ export default function VenueDetailPage() {
   const handleReply = async (reviewId) => {
     if (!user) return setShowLoginModal(true);
     const text = replyText[reviewId];
-    if (!text)
-      return toast.error("Reply cannot be empty", { position: "top-center" });
+    if (!text) {
+      toast.error("Reply cannot be empty", { position: "top-center" });
+      return;
+    }
+
+    try {
     await axios.post(
       `http://localhost:5000/api/reviews/${id}/reply`,
       {
@@ -183,9 +209,21 @@ export default function VenueDetailPage() {
         },
       }
     );
+      toast.success("Reply added successfully!", { position: "top-center" });
     const updated = await axios.get(`http://localhost:5000/api/reviews/${id}`);
     setReviews(updated.data);
     setReplyText((prev) => ({ ...prev, [reviewId]: "" }));
+      setShowReplyInput((prev) => ({ ...prev, [reviewId]: false }));
+    } catch (error) {
+      toast.error("Failed to add reply", { position: "top-center" });
+    }
+  };
+
+  const toggleReplyInput = (reviewId) => {
+    setShowReplyInput((prev) => ({
+      ...prev,
+      [reviewId]: !prev[reviewId]
+    }));
   };
 
   const getImageName = (id) => {
@@ -201,28 +239,26 @@ export default function VenueDetailPage() {
     }
   };
 
-  if (!venue) return <div className="text-center py-20">Loading...</div>;
+  if (!venue) return (
+    <div className="min-h-screen flex items-center justify-center">
+      <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#7a1313]"></div>
+    </div>
+  );
 
   return (
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.6 }}
-      className="min-h-screen py-6 px-4 sm:px-8 lg:px-16"
+      className="min-h-screen bg-gray-50"
     >
       <LoginPromptModal
         visible={showLoginModal}
         onClose={() => setShowLoginModal(false)}
       />
-      <Link
-        href="/venues"
-        className="text-[#7a1313] hover:text-white transition px-4 py-2 inline-block text-sm"
-      >
-        &larr; Back to Venues
-      </Link>
-      <div className="max-w-5xl mx-auto">
-        <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
-          <div className="relative h-64">
+      
+      {/* Hero Section */}
+      <div className="relative h-[60vh] w-full">
             {venue.hallImages && venue.hallImages.length > 0 ? (
               <>
                 <img
@@ -230,58 +266,57 @@ export default function VenueDetailPage() {
                   alt={`Venue ${venue.name}`}
                   className="object-cover w-full h-full"
                 />
+            <div className="absolute inset-0 bg-black bg-opacity-40"></div>
+            
+            {/* Venue Name and Address - Positioned higher */}
+            <div className="absolute top-1/4 left-0 right-0 p-8 text-white">
+              <h1 className="text-4xl font-bold mb-2">{venue.name}</h1>
+              <p className="text-lg">{venue.address}</p>
+            </div>
+
+            {/* Back Button - Positioned higher */}
+            <div className="absolute top-8 left-8">
+              <Link
+                href="/venues"
+                className="inline-flex items-center text-white hover:text-gray-200 transition bg-black/30 px-4 py-2 rounded-lg"
+              >
+                <span className="mr-2">←</span> Back to Venues
+              </Link>
+            </div>
+
                 {venue.hallImages.length > 1 && (
                   <div className="absolute bottom-4 left-0 right-0 flex justify-center space-x-2">
                     {venue.hallImages.map((_, index) => (
                       <button
                         key={index}
                         onClick={() => setCurrentImageIndex(index)}
-                        className={`w-2 h-2 rounded-full ${
-                          currentImageIndex === index ? 'bg-white' : 'bg-white/50'
+                    className={`w-3 h-3 rounded-full transition-all ${
+                      currentImageIndex === index ? 'bg-white scale-125' : 'bg-white/50'
                         }`}
                       />
                     ))}
                   </div>
                 )}
-                {venue.hallImages.length > 1 && (
-                  <>
-                    <button
-                      onClick={() => setCurrentImageIndex((prev) => 
-                        prev === 0 ? venue.hallImages.length - 1 : prev - 1
-                      )}
-                      className="absolute left-4 top-1/2 -translate-y-1/2 bg-black/50 text-white p-2 rounded-full"
-                    >
-                      ←
-                    </button>
-                    <button
-                      onClick={() => setCurrentImageIndex((prev) => 
-                        prev === venue.hallImages.length - 1 ? 0 : prev + 1
-                      )}
-                      className="absolute right-4 top-1/2 -translate-y-1/2 bg-black/50 text-white p-2 rounded-full"
-                    >
-                      →
-                    </button>
-                  </>
-                )}
               </>
             ) : (
-              <img
-                src="/Image/venues/venue1.png"
-                alt={`Venue ${venue.name}`}
-                className="object-cover w-full h-full"
-              />
-            )}
+          <div className="w-full h-full bg-gray-200 flex items-center justify-center">
+            <p className="text-gray-500">No images available</p>
           </div>
-          <div className="p-6 space-y-4">
-            <h1 className="text-2xl font-extrabold text-[#7a1313]">
-              {venue.name}
-            </h1>
-            <p className="text-gray-500 text-sm">{venue.address}</p>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-1">
-                <h2 className="text-md font-semibold text-[#7a1313]">Phone</h2>
+        )}
+      </div>
+
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-20 relative z-10">
+        <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
+          {/* Quick Info Section */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6 p-8 border-b">
+            <div className="flex items-center space-x-3">
+              <div className="bg-[#7a1313]/10 p-3 rounded-full">
+                <FaPhone className="text-[#7a1313] text-xl" />
+              </div>
+              <div>
+                <p className="text-sm text-gray-500">Phone</p>
                 <div className="flex items-center space-x-2">
-                  <p className="text-gray-600 text-sm">{venue.phone}</p>
+                  <p className="font-medium">{venue.phone}</p>
                   <a
                     href={`https://wa.me/${venue.phone.replace(/[^0-9]/g, "")}`}
                     target="_blank"
@@ -291,89 +326,169 @@ export default function VenueDetailPage() {
                     <FaWhatsapp size={18} />
                   </a>
                 </div>
+                </div>
               </div>
 
-              <div>
-                <h2 className="text-md font-semibold text-[#7a1313]">
-                  Established
-                </h2>
-                <p className="text-gray-600 text-sm">{venue.established}</p>
+            <div className="flex items-center space-x-3">
+              <div className="bg-[#7a1313]/10 p-3 rounded-full">
+                <FaCalendarAlt className="text-[#7a1313] text-xl" />
               </div>
               <div>
-                <h2 className="text-md font-semibold text-[#7a1313]">
-                  Capacity
-                </h2>
-                <p className="text-gray-600 text-sm">{venue.capacity} people</p>
+                <p className="text-sm text-gray-500">Established</p>
+                <p className="font-medium">{venue.established}</p>
+              </div>
+            </div>
+
+            <div className="flex items-center space-x-3">
+              <div className="bg-[#7a1313]/10 p-3 rounded-full">
+                <FaUsers className="text-[#7a1313] text-xl" />
               </div>
               <div>
-                <h2 className="text-md font-semibold text-[#7a1313]">
-                  Number of Halls
-                </h2>
-                <p className="text-gray-600 text-sm">{venue.numberOfHalls}</p>
+                <p className="text-sm text-gray-500">Capacity</p>
+                <p className="font-medium">{venue.capacity} people</p>
               </div>
             </div>
-            <div>
-              <h2 className="text-md font-semibold text-[#7a1313] mb-2">
-                Pricing
-              </h2>
-              <ul className="text-gray-600 text-sm grid grid-cols-1 md:grid-cols-2 gap-2">
-                <li>Advance Payment: Rs{venue.advancePayment}</li>
-                <li>Food Silver: Rs{venue.foodSilverPrice}</li>
-                <li>Food Gold: Rs{venue.foodGoldPrice}</li>
-                <li>Food Diamond: Rs{venue.foodDiamondPrice}</li>
-                <li>Makeup: Rs{venue.makeupPrice}</li>
-                <li>Decoration: Rs{venue.decorationPrice}</li>
-                <li>Entertainment: Rs{venue.entertainmentPrice}</li>
-              </ul>
+
+            <div className="flex items-center space-x-3">
+              <div className="bg-[#7a1313]/10 p-3 rounded-full">
+                <FaBuilding className="text-[#7a1313] text-xl" />
+              </div>
+              <div>
+                <p className="text-sm text-gray-500">Number of Halls</p>
+                <p className="font-medium">{venue.numberOfHalls}</p>
+              </div>
             </div>
-            <div>
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                className="mt-4 w-full bg-[#7a1313] text-white py-3 rounded-lg hover:bg-[#5a0e0e]"
-                onClick={handleBooking}
-              >
-                Book Now
-              </motion.button>
+          </div>
+
+          {/* Pricing Section */}
+          <div className="p-8 border-b">
+            <h2 className="text-2xl font-bold text-[#7a1313] mb-6">Pricing Details</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              <div className="bg-gray-50 p-6 rounded-xl">
+                <div className="flex items-center space-x-3 mb-4">
+                  <div className="bg-[#7a1313]/10 p-3 rounded-full">
+                    <FaMoneyBillWave className="text-[#7a1313] text-xl" />
+                  </div>
+                  <h3 className="font-semibold">Advance Payment</h3>
+                </div>
+                <p className="text-2xl font-bold text-[#7a1313]">Rs{venue.advancePayment}</p>
+              </div>
+
+              <div className="bg-gray-50 p-6 rounded-xl">
+                <div className="flex items-center space-x-3 mb-4">
+                  <div className="bg-[#7a1313]/10 p-3 rounded-full">
+                    <FaUtensils className="text-[#7a1313] text-xl" />
+                  </div>
+                  <h3 className="font-semibold">Food Packages</h3>
+                </div>
+                <div className="space-y-2">
+                  <p className="flex justify-between">
+                    <span>Silver</span>
+                    <span className="font-semibold">Rs{venue.foodSilverPrice}</span>
+                  </p>
+                  <p className="flex justify-between">
+                    <span>Gold</span>
+                    <span className="font-semibold">Rs{venue.foodGoldPrice}</span>
+                  </p>
+                  <p className="flex justify-between">
+                    <span>Diamond</span>
+                    <span className="font-semibold">Rs{venue.foodDiamondPrice}</span>
+                  </p>
+                </div>
+              </div>
+
+              <div className="bg-gray-50 p-6 rounded-xl">
+                <div className="flex items-center space-x-3 mb-4">
+                  <div className="bg-[#7a1313]/10 p-3 rounded-full">
+                    <FaPalette className="text-[#7a1313] text-xl" />
+                  </div>
+                  <h3 className="font-semibold">Additional Services</h3>
+                </div>
+                <div className="space-y-2">
+                  <p className="flex justify-between">
+                    <span>Makeup</span>
+                    <span className="font-semibold">Rs{venue.makeupPrice}</span>
+                  </p>
+                  <p className="flex justify-between">
+                    <span>Decoration</span>
+                    <span className="font-semibold">Rs{venue.decorationPrice}</span>
+                  </p>
+                  <p className="flex justify-between">
+                    <span>Entertainment</span>
+                    <span className="font-semibold">Rs{venue.entertainmentPrice}</span>
+                  </p>
+                </div>
+              </div>
             </div>
-            <div className="mt-8">
-              <h2 className="text-lg font-bold text-[#7a1313]">
-                Leave a Review
-              </h2>
-              <div className="flex space-x-1 py-2">
+          </div>
+
+          {/* Location Section */}
+          <div className="p-8 border-b">
+            <h2 className="text-2xl font-bold text-[#7a1313] mb-6">Location</h2>
+            <div className="h-96 rounded-xl overflow-hidden shadow-lg">
+              <VenueMap venue={venue} />
+            </div>
+          </div>
+
+          {/* Reviews Section */}
+          <div className="p-8">
+            <h2 className="text-2xl font-bold text-[#7a1313] mb-6">Reviews & Ratings</h2>
+            
+            {/* Review Form */}
+            <div className="bg-gray-50 p-6 rounded-xl mb-8">
+              <h3 className="text-lg font-semibold mb-4">Leave a Review</h3>
+              <div className="flex items-center space-x-2 mb-4">
+                <span className="text-gray-600">Your Rating:</span>
+                <div className="flex space-x-1">
                 {[1, 2, 3, 4, 5].map((star) => (
-                  <span
+                    <button
                     key={star}
-                    onClick={() => setRating(star)}
-                    className="cursor-pointer"
+                      onClick={() => handleRatingClick(star)}
+                      className="focus:outline-none"
                   >
                     {star <= rating ? (
-                      <FaStar className="text-yellow-400" />
-                    ) : (
-                      <FaRegStar className="text-gray-400" />
-                    )}
+                        <FaStar className="text-3xl text-yellow-400 hover:text-yellow-500 transition-colors" />
+                      ) : (
+                        <FaRegStar className="text-3xl text-gray-400 hover:text-yellow-400 transition-colors" />
+                      )}
+                    </button>
+                  ))}
+                </div>
+                {rating > 0 && (
+                  <span className="text-gray-600 ml-2">
+                    ({rating} {rating === 1 ? 'star' : 'stars'})
                   </span>
-                ))}
+                )}
               </div>
               <textarea
                 value={comment}
                 onChange={(e) => setComment(e.target.value)}
-                className="w-full border border-gray-300 rounded-lg p-2"
+                className="w-full border border-gray-300 rounded-lg p-3 mt-4 focus:ring-2 focus:ring-[#7a1313] focus:border-transparent"
                 rows="3"
-                placeholder="Write your comment..."
+                placeholder="Share your experience with this venue..."
               ></textarea>
               <button
                 onClick={handleSubmitReview}
-                className="mt-2 px-4 py-2 bg-[#7a1313] text-white rounded-lg"
+                className="mt-4 px-6 py-2 bg-[#7a1313] text-white rounded-lg hover:bg-[#5a0e0e] transition flex items-center space-x-2"
               >
-                Submit Review
+                <span>Submit Review</span>
+                <FaStar className="text-yellow-400" />
               </button>
             </div>
-            <div className="mt-8">
-              <h2 className="text-lg font-bold text-[#7a1313]">Reviews</h2>
-              {reviews.map((rev) => (
-                <div key={rev._id} className="border-b py-4">
+
+            {/* Reviews List */}
+            <div className="space-y-6">
+              {reviews.length === 0 ? (
+                <div className="text-center py-8 bg-gray-50 rounded-xl">
+                  <p className="text-gray-500">No reviews yet. Be the first to review!</p>
+                </div>
+              ) : (
+                reviews.map((rev) => (
+                  <div key={rev._id} className="bg-white p-6 rounded-xl shadow-sm border">
+                    <div className="flex items-center justify-between mb-4">
+                      <div>
                   <p className="font-semibold">{rev.username}</p>
+                        <div className="flex items-center space-x-2">
                   <div className="flex space-x-1">
                     {[1, 2, 3, 4, 5].map((star) => (
                       <span key={star}>
@@ -385,15 +500,37 @@ export default function VenueDetailPage() {
                       </span>
                     ))}
                   </div>
-                  <p className="text-gray-700">{rev.comment}</p>
-                  <div className="flex items-center gap-2 mt-2">
+                          <span className="text-sm text-gray-500">
+                            ({rev.rating} {rev.rating === 1 ? 'star' : 'stars'})
+                          </span>
+                        </div>
+                      </div>
+                      <div className="flex items-center space-x-2">
                     <button
                       onClick={() => handleLike(rev._id)}
-                      className="text-red-500"
+                          className="text-red-500 hover:text-red-600 transition"
                     >
                       <FaHeart />
                     </button>
-                    <input
+                      </div>
+                    </div>
+                    <p className="text-gray-700 mb-4">{rev.comment}</p>
+                    
+                    {/* Reply Section */}
+                    <div className="space-y-3">
+                      {/* Reply Button */}
+                      <button
+                        onClick={() => toggleReplyInput(rev._id)}
+                        className="text-[#7a1313] hover:text-[#5a0e0e] transition flex items-center space-x-1"
+                      >
+                        <FaReply />
+                        <span>Reply</span>
+                      </button>
+
+                      {/* Reply Input */}
+                      {showReplyInput[rev._id] && (
+                        <div className="mt-2">
+                          <textarea
                       value={replyText[rev._id] || ""}
                       onChange={(e) =>
                         setReplyText({
@@ -401,30 +538,65 @@ export default function VenueDetailPage() {
                           [rev._id]: e.target.value,
                         })
                       }
-                      placeholder="Write reply"
-                      className="border px-2 py-1 rounded"
-                    />
+                            placeholder="Write your reply..."
+                            className="w-full border px-3 py-2 rounded-lg focus:ring-2 focus:ring-[#7a1313] focus:border-transparent"
+                            rows="2"
+                          />
+                          <div className="flex justify-end space-x-2 mt-2">
+                            <button
+                              onClick={() => {
+                                setShowReplyInput((prev) => ({ ...prev, [rev._id]: false }));
+                                setReplyText((prev) => ({ ...prev, [rev._id]: "" }));
+                              }}
+                              className="px-3 py-1 text-gray-600 hover:text-gray-800"
+                            >
+                              Cancel
+                            </button>
                     <button
                       onClick={() => handleReply(rev._id)}
-                      className="text-blue-500"
+                              className="px-3 py-1 bg-[#7a1313] text-white rounded hover:bg-[#5a0e0e] transition"
                     >
-                      <FaReply />
+                              Submit Reply
                     </button>
                   </div>
-                  {rev.replies &&
-                    rev.replies.map((r, idx) => (
-                      <div key={idx} className="ml-6 mt-2 border-l pl-4">
-                        <p className="text-sm text-gray-600">
-                          <strong>{r.username}:</strong> {r.reply}
+                        </div>
+                      )}
+
+                      {/* Existing Replies */}
+                      {rev.replies && rev.replies.length > 0 && (
+                        <div className="mt-4 space-y-3">
+                          {rev.replies.map((r, idx) => (
+                            <div key={idx} className="ml-6 pl-4 border-l-2 border-gray-200">
+                              <p className="text-sm">
+                                <span className="font-semibold text-[#7a1313]">{r.username}:</span>{" "}
+                                {r.reply}
                         </p>
                       </div>
                     ))}
                 </div>
-              ))}
+                      )}
+                    </div>
+                  </div>
+                ))
+              )}
             </div>
           </div>
+        </div>
+
+        {/* Book Now Button */}
+        <div className="fixed bottom-8 right-8">
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            className="bg-[#7a1313] text-white px-8 py-4 rounded-full shadow-lg hover:bg-[#5a0e0e] transition flex items-center space-x-2"
+            onClick={handleBooking}
+          >
+            <span className="font-semibold">Book Now</span>
+            <FaCalendarAlt />
+          </motion.button>
         </div>
       </div>
     </motion.div>
   );
 }
+

@@ -19,11 +19,12 @@ const getReviews = async (req, res) => {
 const addReview = async (req, res) => {
   try {
     const venueId = req.params.id || req.body.venueId;
-    const { userId, rating, comment } = req.body;
+    const { rating, comment } = req.body;
+    const userId = req.user.id;
     
     console.log('Received review data:', { venueId, userId, rating, comment });
 
-    if (!userId || !rating || !comment) {
+    if (!rating || !comment) {
       return res.status(400).json({ message: 'Missing required fields' });
     }
 
@@ -62,8 +63,9 @@ const addReview = async (req, res) => {
 // Like a review
 const likeReview = async (req, res) => {
   try {
-    const { id, reviewId } = req.params;
-    const { userId } = req.body;
+    const { id } = req.params;
+    const { reviewId } = req.body;
+    const userId = req.user.id;
 
     const review = await Review.findById(reviewId);
     if (!review) return res.status(404).json({ message: "Review not found" });
@@ -80,30 +82,51 @@ const likeReview = async (req, res) => {
   }
 };
 
-// Add reply to a review (can be from user or owner)
+// Add reply to a review
 const addReply = async (req, res) => {
   try {
-    const { id, reviewId } = req.params;
-    const { userId, username, reply } = req.body;
+    const { id } = req.params;
+    const { reviewId, reply } = req.body;
+    const userId = req.user.id;
 
-    // Verify user exists (can be regular user or owner)
-    const user = await User.findById(userId);
-    if (!user) return res.status(404).json({ message: "User not found" });
+    if (!reviewId || !reply) {
+      return res.status(400).json({ message: "Missing required fields" });
+    }
 
     const review = await Review.findById(reviewId);
-    if (!review) return res.status(404).json({ message: "Review not found" });
+    if (!review) {
+      return res.status(404).json({ message: "Review not found" });
+    }
+
+    // Verify user exists
+    let user;
+    if (mongoose.Types.ObjectId.isValid(userId)) {
+      user = await User.findById(userId);
+    } else {
+      user = await User.findOne({ googleId: userId });
+    }
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
 
     const newReply = {
-      userId,
-      username,
-      reply
+      userId: user._id,
+      username: user.username || user.name || user.email.split('@')[0],
+      reply: reply,
+      createdAt: new Date()
     };
 
     review.replies.push(newReply);
     await review.save();
+
     res.status(201).json(review);
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    console.error('Error adding reply:', error);
+    res.status(500).json({ 
+      message: 'Failed to add reply',
+      error: error.message 
+    });
   }
 };
 

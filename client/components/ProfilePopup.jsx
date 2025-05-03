@@ -26,11 +26,31 @@ export default function ProfilePopup({ onClose }) {
             ...session.user,
             provider: "google"
           });
+          
           // For Google login, use the part before @ in email as username
           const emailUsername = session.user.email.split('@')[0];
           setUsername(emailUsername);
           setUserImage(session.user.image);
-          setUserRole("user");
+          
+          // Get role from session
+          if (session.user.token) {
+            try {
+              const response = await axios.get('http://localhost:5000/api/auth/user', {
+                headers: {
+                  Authorization: `Bearer ${session.user.token}`
+                }
+              });
+              
+              setUserRole(response.data.user.role);
+            } catch (error) {
+              console.error("Error fetching user details:", error);
+              // If API call fails, use role from session
+              setUserRole(session.user.role || "user");
+            }
+          } else {
+            // If no token, use role from session
+            setUserRole(session.user.role || "user");
+          }
           setLoading(false);
           return;
         }
@@ -39,8 +59,9 @@ export default function ProfilePopup({ onClose }) {
         const token = localStorage.getItem("token");
         if (token) {
           try {
+            // Decode JWT token to get role
             const decoded = JSON.parse(atob(token.split(".")[1]));
-            setUserRole(decoded.role || "user");
+            setUserRole(decoded.role);
             
             const response = await axios.get('http://localhost:5000/api/auth/user', {
               headers: {

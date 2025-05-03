@@ -128,8 +128,7 @@ const register = async (req, res) => {
 const login = async (req, res) => {
   try {
     const { email, password } = req.body;
-    console.log('Incoming login request body:', req.body); // Log the incoming request body
-    console.log('Login request body:', req.body); // Log the incoming request body
+    console.log('Incoming login request body:', req.body);
 
     // Validate input
     if (!email || !password) {
@@ -139,14 +138,33 @@ const login = async (req, res) => {
       });
     }
 
-    console.log('Login attempt for:', email); // Log the email for debugging
+    console.log('Login attempt for:', email);
 
-    // Check if user exists
-    const user = await User.findOne({ email }).select("+password");
-    console.log('User found:', user ? user : 'No user found');
+    // First, let's check if the user exists without any conditions
+    const allUsers = await User.find({});
+    console.log('Total users in database:', allUsers.length);
+    console.log('All user emails:', allUsers.map(u => u.email));
 
-    if (!user || !user.password) { 
-      return res.status(400).json({ 
+    // Try to find the user with a more explicit query
+    const user = await User.findOne({ 
+      $expr: { 
+        $eq: [{ $toLower: "$email" }, email.toLowerCase()] 
+      }
+    });
+
+    console.log('User found:', user ? 'Yes' : 'No');
+    if (user) {
+      console.log('Found user details:', {
+        id: user._id,
+        email: user.email,
+        role: user.role,
+        status: user.status
+      });
+    }
+
+    if (!user) {
+      console.log('No user found with email:', email);
+      return res.status(400).json({
         success: false,
         message: 'Invalid credentials',
         field: 'email'
@@ -155,13 +173,13 @@ const login = async (req, res) => {
 
     // Compare hashed password
     const trimmedPassword = password.trim();
-     console.log('Login attempt - input password:', trimmedPassword);
-     console.log('Stored hash:', user.password);
-     const isMatch = await bcrypt.compare(trimmedPassword, user.password);
-     console.log('Password match result:', isMatch);
+    console.log('Login attempt - input password:', trimmedPassword);
+    console.log('Stored hash:', user.password);
+    const isMatch = await bcrypt.compare(trimmedPassword, user.password);
+    console.log('Password match result:', isMatch);
 
     if (!isMatch) {
-      return res.status(400).json({ 
+      return res.status(400).json({
         success: false,
         message: 'Invalid credentials',
         field: 'password'
@@ -170,7 +188,7 @@ const login = async (req, res) => {
 
     // Check if user is approved
     if (user.status !== 'approved') {
-      return res.status(400).json({ 
+      return res.status(400).json({
         success: false,
         message: 'Wait for admin approval',
         field: 'status'
@@ -184,71 +202,75 @@ const login = async (req, res) => {
       { expiresIn: '1h' }
     );
 
-    res.status(200).json({ 
+    res.status(200).json({
       success: true,
       userId: user._id,
       token,
       role: user.role,
-      message: 'Login successful' 
+      message: 'Login successful'
     });
   } catch (error) {
     console.error('Login error:', error);
-    res.status(500).json({ 
+    res.status(500).json({
       success: false,
-      message: 'Login failed',
-      error: error.message
+      message: 'Server error during login'
     });
   }
 };
 
 // Google Sign-In
 const googleSignIn = async (req, res) => {
-  const { idToken } = req.body; // Get the ID token from the request body
+  try {
+    const { email, name, image } = req.body;
 
-  // Verify the ID token with Google
-  const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
-  const ticket = await client.verifyIdToken({
-    idToken,
-    audience: process.env.GOOGLE_CLIENT_ID,
-  });
-  const payload = ticket.getPayload();
+    if (!email) {
+      return res.status(400).json({
+        success: false,
+        message: 'Email is required'
+      });
+    }
 
-  const { email, given_name, family_name, sub, picture } = payload; // Extract user info from the payload
+    // Check if the user already exists
+    let user = await User.findOne({ email });
 
-  // Check if the user already exists
-  let user = await User.findOne({ email });
+    if (!user) {
+      // If the user does not exist, create a new user
+      const [firstName, ...lastNameParts] = name.split(' ');
+      const lastName = lastNameParts.join(' ');
 
-  if (!user) {
-    // If the user does not exist, create a new user
-    user = new User({
-      firstName: given_name,
-      lastName: family_name,
-      email,
-      googleId: sub,
-      provider: 'google',
-      avatar: picture,
+      user = new User({
+        firstName,
+        lastName,
+        email,
+        username: email.split('@')[0],
+        provider: 'google',
+        avatar: image,
+        status: 'approved' // Auto-approve Google users
+      });
+      await user.save();
+    }
+
+    // Generate JWT Token
+    const token = jwt.sign(
+      { userId: user._id, role: user.role },
+      process.env.JWT_SECRET,
+      { expiresIn: '30d' }
+    );
+
+    res.status(200).json({
+      success: true,
+      userId: user._id,
+      token,
+      role: user.role,
+      message: 'Google sign-in successful'
     });
-    await user.save();
-  } else {
-    // Update the user's avatar if they already exist
-    user.avatar = picture;
-    await user.save();
+  } catch (error) {
+    console.error('Google sign-in error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error during Google sign-in'
+    });
   }
-
-  // Generate JWT Token
-  const token = jwt.sign(
-    { userId: user._id, role: user.role },
-    process.env.JWT_SECRET,
-    { expiresIn: '1h' }
-  );
-
-  res.status(200).json({ 
-    success: true,
-    userId: user._id,
-    token,
-    role: user.role,
-    message: 'Google sign-in successful' 
-  });
 };
 
 // Get User Details
@@ -285,41 +307,45 @@ const getUserDetails = async (req, res) => {
     }
 
     // Find user by ID from token
-    const user = await User.findById(decoded.userId);
+    const user = await User.findById(decoded.userId || decoded.id)
+      .select('-password -__v')
+      .lean();
+
     if (!user) {
-      return res.status(404).json({ message: "User not found" });
+      return res.status(404).json({ 
+        success: false, 
+        message: "User not found" 
+      });
     }
 
-    console.log("Found user:", {
-      id: user._id,
-      email: user.email,
-      avatar: user.avatar,
-      hasImage: !!user.avatar
-    });
-
-    // Format user data for frontend
+    // Format comprehensive user data response
     const userData = {
-      _id: user._id,
+      id: user._id,
       firstName: user.firstName,
       lastName: user.lastName,
       email: user.email,
       username: user.username,
-      image: user.avatar, // For frontend compatibility
-      avatar: user.avatar, // For backward compatibility
       role: user.role,
-      loyaltyPoints: user.loyaltyPoints,
-      lastPointsClaimed: user.lastPointsClaimed,
-      createdAt: user.createdAt // Add join date
+      image: user.avatar || null,  // Add image field for frontend compatibility
+      avatar: user.avatar,         // Keep original field for backward compatibility
+      phone: user.phone,
+      address: user.address,
+      createdAt: user.createdAt,
+      updatedAt: user.updatedAt,
+      ...(user.role === 'owner' && {
+        venueDetails: {
+          venueName: user.venueName,
+          venueAddress: user.venueAddress,
+          venuePhone: user.venuePhone,
+          hallImages: user.hallImages
+        }
+      })
     };
 
-    console.log("Sending user data:", {
-      id: userData._id,
-      email: userData.email,
-      image: userData.image,
-      avatar: userData.avatar
+    res.status(200).json({ 
+      success: true, 
+      user: userData 
     });
-
-    res.json({ user: userData });
   } catch (error) {
     console.error("Error in getUserDetails:", error);
     res.status(500).json({ 

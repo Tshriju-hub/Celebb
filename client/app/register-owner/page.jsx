@@ -24,12 +24,12 @@ export default function RegisterOwnerPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  // Redirect if already authenticated
+  /* Redirect if already authenticated
   useEffect(() => {
     if(session.user.role === 'owner'){
       window.location.href = '/'; // or router.push('/')
     }
-  }, [status]);
+  }, [status]);*/
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
