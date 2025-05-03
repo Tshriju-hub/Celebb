@@ -6,6 +6,8 @@ const { Client } = pkg;
 const User = require("../models/User");
 const LoyaltyHistory = require("../models/LoyaltyHistory");
 const mongoose = require("mongoose");
+const { createNotification } = require('./notificationController');
+const Registration = require("../models/Registration");
 
 const client = new Client({
   authStrategy: new customAuth(),
@@ -69,7 +71,8 @@ const createBooking = async (req, res) => {
       phone1,
       phone2,
       address,
-      pointsToRedeem
+      pointsToRedeem,
+      venueId
     } = req.body;
 
     console.log('Server: Creating booking with owner ID:', owner);
@@ -143,6 +146,7 @@ const createBooking = async (req, res) => {
     // Create new booking document
     const newBooking = new Booking({
       owner: user._id, // Use the MongoDB _id from the found user
+      venueId: venueId, // Add the venueId to the booking
       status: 'pending',
       eventType,
       eventTime,
@@ -187,16 +191,52 @@ const createBooking = async (req, res) => {
     console.log('Server: Booking created with ID:', newBooking._id);
     console.log('Server: Booking owner ID:', newBooking.owner);
 
+    // Find the venue owner using the venueId from the request
+    const venue = await Registration.findById(venueId);
+    if (!venue) {
+      console.error('Server: Venue not found for venueId:', venueId);
+    }
+
+    // Find the venue owner using the venue's owner field
+    const venueOwner = await User.findById(venue?.owner);
+    if (!venueOwner) {
+      console.error('Server: Venue owner not found for venue:', venueId);
+    }
+
+    // Create notification for the venue owner
+    if (venueOwner) {
+      console.log('Server: Creating notification for venue owner:', venueOwner._id);
+      await createNotification(
+        venueOwner._id,
+        'booking',
+        'New Booking Received',
+        `A new booking has been received for ${eventType} on ${date}`,
+        `/owner/bookings/${newBooking._id}`
+      );
+    }
+
+    // Create notification for the booking user (the person making the booking)
+    if (req.user && req.user._id) {
+      await createNotification(
+        req.user._id,
+        'booking',
+        'Booking Submitted',
+        `Your booking request for ${eventType} has been submitted successfully. We will notify you once it's reviewed.`,
+        `/bookings/${newBooking._id}`
+      );
+    } else {
+      console.error('Server: User not authenticated for notification');
+    }
+
     // Send WhatsApp notifications
     try {
       // Send notification to admin
       await sendMessage("9860462875", "Alert: A new booking has been received. Please check the owner dashboard.");
       
       // Send notification to customer
-      await sendMessage(phone1, `Hello ${fullName}, your booking has been received! We'll be in touch soon. Thank you for choosing us.`);
+      await sendMessage(phone1, `Hello ${fullName}, your booking request has been submitted! We'll review it and get back to you soon. Thank you for choosing us.`);
     } catch (whatsappError) {
       console.error('Server: Error sending WhatsApp notifications:', whatsappError);
-      // Continue with the response even if WhatsApp notifications fail
     }
 
     res.status(201).json({
@@ -218,10 +258,51 @@ const createBooking = async (req, res) => {
 // Get all bookings
 const getBookings = async (req, res) => {
   try {
-    const bookings = await Booking.find().sort({ createdAt: -1 });
-    res.status(200).json({ success: true, bookings });
+    // Get the authenticated user
+    const user = req.user;
+    
+    if (!user) {
+      return res.status(401).json({ 
+        success: false, 
+        message: "Not authenticated" 
+      });
+    }
+
+    console.log('Fetching bookings for user:', user._id);
+
+    // Find the venue owned by this user
+    const venue = await Registration.findOne({ owner: user._id });
+    if (!venue) {
+      console.log('No venue found for user:', user._id);
+      return res.status(404).json({ 
+        success: false, 
+        message: "No venue found for this owner" 
+      });
+    }
+
+    console.log('Found venue:', venue._id);
+
+    // Find all bookings where the venueId matches the venue's ID
+    const bookings = await Booking.find({ venueId: venue._id })
+      .sort({ createdAt: -1 })
+      .populate('owner', 'name email'); // Populate owner details
+    
+    console.log('Found bookings for venue:', bookings.length);
+    
+    res.status(200).json({ 
+      success: true, 
+      bookings,
+      venueDetails: {
+        name: venue.name,
+        id: venue._id
+      }
+    });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    console.error('Server: Error fetching bookings:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: error.message 
+    });
   }
 };
 
@@ -272,6 +353,23 @@ const updateBookingStatus = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Booking not found' });
     }
 
+    // Find the booking user
+    const bookingUser = await User.findById(booking.owner);
+    if (!bookingUser) {
+      console.error('Server: Booking user not found');
+    }
+
+    // Create notification for the booking user
+    if (bookingUser) {
+      await createNotification(
+        bookingUser._id,
+        'booking',
+        `Booking ${status.charAt(0).toUpperCase() + status.slice(1)}`,
+        `Your booking for ${booking.eventType} has been ${status}`,
+        `/bookings/${booking._id}`
+      );
+    }
+
     // Send WhatsApp notification based on status
     try {
       if (status === 'approved') {
@@ -287,7 +385,6 @@ const updateBookingStatus = async (req, res) => {
       }
     } catch (whatsappError) {
       console.error('Server: Error sending status update WhatsApp notification:', whatsappError);
-      // Continue with the response even if WhatsApp notification fails
     }
 
     res.status(200).json({ success: true, booking });

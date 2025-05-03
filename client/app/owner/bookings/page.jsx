@@ -2,8 +2,11 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
 import OwnerSidebar from "@/components/Sidebar/OwnerSidebar";
+import { toast } from "react-hot-toast";
+import { useSession } from "next-auth/react";
 
 const OwnerBookings = () => {
+  const { data: session } = useSession();
   const [pendingBookings, setPendingBookings] = useState([]);
   const [approvedBookings, setApprovedBookings] = useState([]);
   const [declinedBookings, setDeclinedBookings] = useState([]);
@@ -12,24 +15,56 @@ const OwnerBookings = () => {
 
   const fetchBookings = async () => {
     try {
-      const res = await axios.get("http://localhost:5000/api/bookings");
+      if (!session?.user?.token) {
+        console.error('No session token found');
+        toast.error("Please log in to view bookings");
+        return;
+      }
+
+      console.log('Fetching bookings with session token');
+
+      const res = await axios.get("http://localhost:5000/api/bookings", {
+        headers: {
+          Authorization: `Bearer ${session.user.token}`
+        }
+      });
+
+      console.log('Bookings response:', res.data);
       const allBookings = res.data.bookings || [];
 
       setPendingBookings(allBookings.filter((b) => b.status === "pending"));
       setApprovedBookings(allBookings.filter((b) => b.status === "approved"));
       setDeclinedBookings(allBookings.filter((b) => b.status === "declined"));
     } catch (error) {
-      console.error("Error fetching bookings:", error);
+      console.error("Error fetching bookings:", error.response?.data || error.message);
+      toast.error("Failed to fetch bookings. Please try again.");
     } finally {
       setLoading(false);
     }
   };
 
+  useEffect(() => {
+    if (session?.user?.token) {
+      fetchBookings();
+    }
+  }, [session]);
+
   const updateStatus = async (id, status) => {
     try {
-      await axios.patch(`http://localhost:5000/api/bookings/${id}/status`, {
-        status,
-      });
+      if (!session?.user?.token) {
+        console.error('No session token found');
+        toast.error("Please log in to update booking status");
+        return;
+      }
+
+      await axios.patch(`http://localhost:5000/api/bookings/${id}/status`, 
+        { status },
+        {
+          headers: {
+            Authorization: `Bearer ${session.user.token}`
+          }
+        }
+      );
 
       setPendingBookings((prev) => prev.filter((b) => b._id !== id));
 
@@ -39,13 +74,10 @@ const OwnerBookings = () => {
         setDeclinedBookings((prev) => [...prev, pendingBookings.find((b) => b._id === id)]);
       }
     } catch (err) {
-      console.error("Error updating status:", err);
+      console.error("Error updating status:", err.response?.data || err.message);
+      toast.error("Failed to update booking status");
     }
   };
-
-  useEffect(() => {
-    fetchBookings();
-  }, []);
 
   const renderMenuItems = (menu) => {
     const entries = [];

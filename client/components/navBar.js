@@ -1,6 +1,7 @@
 "use client";
 import React, { useState, useEffect } from "react";
 import ProfilePopup from "./ProfilePopup";
+import NotificationBell from "./NotificationBell";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -104,7 +105,10 @@ export default function NavBar() {
           </div>
 
           {/* Profile / Login */}
-          <div className="hidden md:flex items-center space-x-2 relative">
+          <div className="hidden md:flex items-center space-x-4 relative">
+            {isAuthenticated && (
+              <NotificationBell />
+            )}
             {isAuthenticated ? (
               <div
                 onMouseEnter={() => setShowProfilePopup(true)}

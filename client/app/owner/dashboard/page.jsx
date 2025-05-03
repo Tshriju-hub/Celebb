@@ -16,39 +16,60 @@ export default function OwnerDashboard() {
 
   const { data: session, status } = useSession();
 
-  useEffect(() => {
-    if (!session?.user?.id) return;
-
-    const fetchData = async () => {
-      try {
-        // Fetch Venue Details (assuming it returns an array now)
-        const venueRes = await axios.post("http://localhost:5000/api/auth/registrations/owner", {
-          ownerId: session.user.id,
-        });
-        console.log("Venue Response:", venueRes.data);
-        setVenues(venueRes.data);
-
-        // Fetch Bookings and Count by Status
-        const bookingsRes = await axios.get("http://localhost:5000/api/bookings");
-        const bookings = bookingsRes.data.bookings;
-
-        const counts = {
-          approved: bookings.filter(b => b.status === "approved").length,
-          declined: bookings.filter(b => b.status === "declined").length,
-          pending: bookings.filter(b => b.status === "pending").length,
-        };
-
-        setBookingCounts(counts);
-      } catch (err) {
-        console.error("Dashboard data fetch error:", err);
-        setError("Failed to load dashboard data.");
-      } finally {
-        setLoading(false);
+  const fetchData = async () => {
+    try {
+      if (!session?.user?.token) {
+        console.error('No session token found');
+        setError("Please log in to view dashboard");
+        return;
       }
-    };
 
-    fetchData();
-  }, [session?.user?.id]);
+      // Fetch Venue Details
+      const venueRes = await axios.post(
+        "http://localhost:5000/api/auth/registrations/owner",
+        { ownerId: session.user.id },
+        {
+          headers: {
+            Authorization: `Bearer ${session.user.token}`
+          }
+        }
+      );
+      console.log("Venue Response:", venueRes.data);
+      setVenues(venueRes.data);
+
+      // Fetch Bookings and Count by Status
+      const bookingsRes = await axios.get(
+        "http://localhost:5000/api/bookings",
+        {
+          headers: {
+            Authorization: `Bearer ${session.user.token}`
+          }
+        }
+      );
+      console.log("Bookings Response:", bookingsRes.data);
+      const bookings = bookingsRes.data.bookings || [];
+
+      const counts = {
+        approved: bookings.filter(b => b.status === "approved").length,
+        declined: bookings.filter(b => b.status === "declined").length,
+        pending: bookings.filter(b => b.status === "pending").length,
+      };
+
+      console.log("Booking counts:", counts);
+      setBookingCounts(counts);
+    } catch (err) {
+      console.error("Dashboard data fetch error:", err.response?.data || err.message);
+      setError(err.response?.data?.message || "Failed to load dashboard data");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (session?.user?.token) {
+      fetchData();
+    }
+  }, [session]);
 
   if (status === "loading") {
     return <p className="p-8 text-lg text-gray-600">Loading session...</p>;

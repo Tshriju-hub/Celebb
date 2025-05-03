@@ -316,9 +316,9 @@ export default function VenueDetailPage() {
               <div>
                 <p className="text-sm text-gray-500">Phone</p>
                 <div className="flex items-center space-x-2">
-                  <p className="font-medium">{venue.phone}</p>
+                  <p className="font-medium">{venue.phone || 'Phone number not available'}</p>
                   <a
-                    href={`https://wa.me/${venue.phone.replace(/[^0-9]/g, "")}`}
+                    href={`https://wa.me/${(venue.phone || '').replace(/[^0-9]/g, "")}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="text-green-500 hover:text-green-600"

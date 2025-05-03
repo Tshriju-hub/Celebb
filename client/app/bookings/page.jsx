@@ -278,9 +278,11 @@ const UserBooking = () => {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          "Authorization": `Bearer ${session.user.token}`
         },
         body: JSON.stringify({
-          owner: session.user.id, // This should be a valid MongoDB ObjectId
+          owner: session.user.id,
+          venueId: venueId,
           eventType,
           eventTime,
           totalGuests,

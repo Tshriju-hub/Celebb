@@ -6,21 +6,22 @@ const {
   updateBookingStatus,
   sendMessage
 } = require("../controllers/bookingController");
+const { protect } = require("../middleware/auth");
 const router = express.Router();
 
 // POST /api/bookings - Create new booking
-router.post("/", createBooking);
+router.post("/", protect, createBooking);
 
 // POST /api/bookings/message - Send message
-router.post("/message", sendMessage);
+router.post("/message", protect, sendMessage);
 
 // GET /api/bookings - Get all bookings
-router.get("/", getBookings);
+router.get("/", protect, getBookings);
 
 // GET /api/bookings/owner/:ownerId - Get bookings by owner
-router.get("/owner/:ownerId", getOwnerBookings);
+router.get("/owner/:ownerId", protect, getOwnerBookings);
 
 // PATCH /api/bookings/:bookingId/status - Update booking status
-router.patch("/:bookingId/status", updateBookingStatus);
+router.patch("/:bookingId/status", protect, updateBookingStatus);
 
 module.exports = router;
