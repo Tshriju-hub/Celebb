@@ -25,6 +25,7 @@ router.get('/registrations/:id', ownerController.getVenueDetails); // New route 
 // New route for fetching user details
 router.get('/user', authController.getUserDetails); // Add this line
 router.post('/approve-user', authController.approveUser); // New route for approving user
+router.post('/ban-user', authController.banUser); // New route for banning user
 
 router.get('/getvenue',ownerController.getVenueAdmin); // New route for fetching venue details by admin
 router.get('/registrations', ownerController.getVenues); // New route for fetching all registrations

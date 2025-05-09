@@ -50,7 +50,7 @@ const userSchema = new mongoose.Schema({
   },
   status: {
     type: String,
-    enum: ['approved', 'pending', 'rejected'],
+    enum: ['approved', 'pending', 'rejected','banned'],
     default: 'pending'
   },
   avatar: {

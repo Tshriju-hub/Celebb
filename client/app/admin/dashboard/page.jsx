@@ -1,8 +1,9 @@
 "use client";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import axios from "axios";
 import AdminSidebar from "@/components/Sidebar/AdminSidebar";
 import { FaNewspaper, FaBuilding, FaUsers, FaChartLine, FaCalendarCheck } from 'react-icons/fa';
+import { BsThreeDotsVertical } from "react-icons/bs";
 import { toast } from "react-toastify";
 import Link from "next/link";
 import { useSession } from 'next-auth/react';
@@ -73,6 +74,40 @@ const AdminDashboard = () => {
       borderColor: ['#388E3C', '#F57C00', '#D32F2F'],
       borderWidth: 1,
     }]
+  };
+
+  const banUser = async (userId) => {
+    if (window.confirm("Ban this user?")) {
+      try {
+        await axios.post("http://localhost:5000/api/auth/ban-user", { userId });
+        toast.success("User banned");
+        setUsers((prev) =>
+          prev.map((user) =>
+            user._id === userId ? { ...user, status: "banned" } : user
+          )
+        );
+      } catch (error) {
+        toast.error("Failed to ban user");
+        console.error(error);
+      }
+    }
+  };
+
+  const deleteUser = async (userId) => {
+    if (window.confirm("Delete this user permanently?")) {
+      try {
+        await axios.delete(`http://localhost:5000/api/user/delete/${userId}`);
+        toast.success("User deleted");
+        setUsers((prev) => prev.filter((user) => user._id !== userId));
+      } catch (error) {
+        toast.error("Failed to delete user");
+        console.error(error);
+      }
+    }
+  };
+
+  const toggleMenu = (userId) => {
+    setMenuOpenId((prev) => (prev === userId ? null : userId));
   };
 
   return (

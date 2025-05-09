@@ -4,6 +4,8 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const dotenv = require('dotenv');
 const { OAuth2Client } = require('google-auth-library');
+const {sendMessage} = require('./bookingController'); // Import the sendMessage function
+const { sendMail } = require('../lib/mailer'); // Import the sendMail function
 
 dotenv.config();
 
@@ -422,6 +424,45 @@ const approveUser = async (req, res) => {
   }
 }
 
+const banUser = async (req, res) => {
+  try {
+    const { userId } = req.body; // Get userId from request body
+    const  user = await User.findById(userId); // Find user by ID
+    if (!user) {
+      return res.status(404).json({ 
+        success: false,
+        message: 'User not found' 
+      });
+    }
+    const updatedUser = await User.findByIdAndUpdate(
+      userId,
+      { status: 'banned' },
+      { new: true }
+    );
+
+    sendMail({
+      to:user.email,
+      subject: 'Information Regarding your Account on CelebStation',
+      text: 'Your Account has been banned for violating our terms and conditions.Please contact support for more information.',
+    })
+    .then(info => console.log('Mail sent:', info))
+    .catch(err => console.error('Send failed:', err));
+    
+    return res.status(200).json({
+      success: true,
+      message:'User banned successfully',
+      user: updatedUser
+    });
+  } catch (error) {
+    console.error('Error approving user:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Server error',
+      error: error.message
+    });
+  }
+}
+
 // Export functions
 module.exports = { 
   register, 
@@ -431,5 +472,6 @@ module.exports = {
   getUserDetails,
   protect,
   approveUser,
-  owner 
+  owner,
+  banUser
 };
