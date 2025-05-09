@@ -1,8 +1,9 @@
 "use client";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import axios from "axios";
 import AdminSidebar from "@/components/Sidebar/AdminSidebar";
 import { FaNewspaper, FaBuilding, FaUsers } from "react-icons/fa";
+import { BsThreeDotsVertical } from "react-icons/bs";
 import { toast } from "react-toastify";
 
 const AdminDashboard = () => {
@@ -11,6 +12,8 @@ const AdminDashboard = () => {
   const [userCount, setUserCount] = useState(0);
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [menuOpenId, setMenuOpenId] = useState(null);
+  const menuRef = useRef();
 
   useEffect(() => {
     const fetchCounts = async () => {
@@ -23,7 +26,6 @@ const AdminDashboard = () => {
         setVenueCount(venueResponse.data.length);
         setUserCount(usersResponse.data.length);
         setUsers(usersResponse.data);
-        console.log(usersResponse.data);
       } catch (error) {
         console.error("Failed to fetch counts", error);
       } finally {
@@ -34,10 +36,20 @@ const AdminDashboard = () => {
     fetchCounts();
   }, []);
 
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (menuRef.current && !menuRef.current.contains(e.target)) {
+        setMenuOpenId(null);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
   const approveUser = async (userId) => {
     if (window.confirm("Approve this user?")) {
       try {
-        await axios.post("http://localhost:5000/api/auth/approve-user", { userId: userId });
+        await axios.post("http://localhost:5000/api/auth/approve-user", { userId });
         toast.success("User approved");
         setUsers((prev) =>
           prev.map((user) =>
@@ -51,10 +63,44 @@ const AdminDashboard = () => {
     }
   };
 
+  const banUser = async (userId) => {
+    if (window.confirm("Ban this user?")) {
+      try {
+        await axios.post("http://localhost:5000/api/auth/ban-user", { userId });
+        toast.success("User banned");
+        setUsers((prev) =>
+          prev.map((user) =>
+            user._id === userId ? { ...user, status: "banned" } : user
+          )
+        );
+      } catch (error) {
+        toast.error("Failed to ban user");
+        console.error(error);
+      }
+    }
+  };
+
+  const deleteUser = async (userId) => {
+    if (window.confirm("Delete this user permanently?")) {
+      try {
+        await axios.delete(`http://localhost:5000/api/user/delete/${userId}`);
+        toast.success("User deleted");
+        setUsers((prev) => prev.filter((user) => user._id !== userId));
+      } catch (error) {
+        toast.error("Failed to delete user");
+        console.error(error);
+      }
+    }
+  };
+
+  const toggleMenu = (userId) => {
+    setMenuOpenId((prev) => (prev === userId ? null : userId));
+  };
+
   return (
     <div className="flex min-h-screen">
       <AdminSidebar />
-      <div className="flex-1 p-6 bg-[#F7F7F7] overflow-y-auto">
+      <div className="flex-1 p-6 bg-[#F7F7F7] overflow-y-auto relative">
         <div className="mb-6">
           <h1 className="text-3xl font-bold text-[#7a1313]">Welcome, Admin!</h1>
         </div>
@@ -101,10 +147,10 @@ const AdminDashboard = () => {
             </div>
 
             {/* User List */}
-            <div className="bg-white p-6 rounded-lg shadow-lg mt-10">
+            <div className="bg-white p-6 rounded-lg shadow-lg mt-10 relative">
               <h2 className="text-xl font-bold mb-4 text-[#7a1313]">User List</h2>
-              <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-200">
+              <div className="overflow-x-auto w-full">
+                <table className="min-w-[1100px] w-full divide-y divide-gray-200">
                   <thead className="bg-gray-100">
                     <tr>
                       <th className="px-4 py-2 text-left text-sm font-semibold text-gray-600">Name</th>
@@ -112,7 +158,7 @@ const AdminDashboard = () => {
                       <th className="px-4 py-2 text-left text-sm font-semibold text-gray-600">Username</th>
                       <th className="px-4 py-2 text-left text-sm font-semibold text-gray-600">Role</th>
                       <th className="px-4 py-2 text-left text-sm font-semibold text-gray-600">Status</th>
-                      <th className="px-4 py-2"></th>
+                      <th className="px-4 py-2 text-left text-sm font-semibold text-gray-600">Actions</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-200">
@@ -131,20 +177,70 @@ const AdminDashboard = () => {
                                 ? "bg-green-100 text-green-700"
                                 : user.status === "rejected"
                                 ? "bg-red-100 text-red-700"
+                                : user.status === "banned"
+                                ? "bg-gray-200 text-gray-700"
                                 : "bg-yellow-100 text-yellow-700"
                             }`}
                           >
                             {user.status}
                           </span>
                         </td>
-                        <td className="px-4 py-2">
-                          {user.status === "pending" && (
-                            <button
-                              onClick={() => approveUser(user._id)}
-                              className="bg-green-600 hover:bg-green-700 text-white px-4 py-1 text-sm rounded-md"
+                        <td className="px-4 py-2 relative">
+                          <button
+                            onClick={() => toggleMenu(user._id)}
+                            className="text-gray-600 hover:text-gray-900"
+                          >
+                            <BsThreeDotsVertical className="text-xl" />
+                          </button>
+
+                          {menuOpenId === user._id && (
+                            <div
+                              ref={menuRef}
+                              className="absolute right-0 mt-2 w-40 bg-white shadow-lg border border-gray-200 rounded-md z-50"
                             >
-                              Approve
-                            </button>
+                              <ul className="py-1">
+                                {user.status === "pending" && (
+                                  <li>
+                                    <button
+                                      onClick={() => {
+                                        approveUser(user._id);
+                                        setMenuOpenId(null);
+                                      }}
+                                      className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100"
+                                    >
+                                      Approve User
+                                    </button>
+                                  </li>
+                                )}
+                                {
+                                  user.status !== "banned" && (
+                                    <li>
+                                  <button
+                                    onClick={() => {
+                                      banUser(user._id);
+                                      setMenuOpenId(null);
+                                    }}
+                                    className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100"
+                                  >
+                                    Ban User
+                                  </button>
+                                </li>
+                                  )
+                                }
+                                
+                                <li>
+                                  <button
+                                    onClick={() => {
+                                      deleteUser(user._id);
+                                      setMenuOpenId(null);
+                                    }}
+                                    className="w-full text-left px-4 py-2 text-sm text-red-700 hover:bg-gray-100"
+                                  >
+                                    Delete User
+                                  </button>
+                                </li>
+                              </ul>
+                            </div>
                           )}
                         </td>
                       </tr>
@@ -153,7 +249,6 @@ const AdminDashboard = () => {
                 </table>
               </div>
             </div>
-
           </>
         )}
       </div>
