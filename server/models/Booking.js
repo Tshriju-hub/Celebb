@@ -151,6 +151,10 @@ const bookingSchema = new Schema(
       type: Number,
       default: 0,
       min: 0
+    },
+    whatsappNotifications: {
+      type: Boolean,
+      default: false
     }
   },
   { timestamps: true }

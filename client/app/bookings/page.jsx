@@ -108,6 +108,36 @@ const UserBooking = () => {
   const [venueDetails, setVenueDetails] = useState(null);
   const [advancePayment, setAdvancePayment] = useState(0);
   const [finalPrice, setFinalPrice] = useState(0);
+  const [selectedPackage, setSelectedPackage] = useState("");
+  const [showTermsModal, setShowTermsModal] = useState(false);
+  const [acceptTerms, setAcceptTerms] = useState(false);
+  const [acceptWhatsApp, setAcceptWhatsApp] = useState(false);
+
+  const [selectedMenuItems, setSelectedMenuItems] = useState({
+    starters: {
+      veg: { items: [] },
+      nonVeg: { chicken: [], fish: [] }
+    },
+    mainCourse: {
+      rice: { items: [] },
+      rotiNaanNoodlesPasta: { items: [] },
+      veg: { items: [] },
+      vegetables: { items: [] },
+      nonVeg: { mutton: [], chicken: [], fish: [] }
+    },
+    pickle: { veg: { items: [] }, fermented: { items: [] } },
+    salads: { veg: { items: [] } },
+    dessert: {
+      sweets: { flourBased: [], milkBased: [] },
+      dairy: { items: [] },
+      ice: { items: [] }
+    },
+    beverages: {
+      coldDrinks: { items: [] },
+      teaCoffee: { items: [] },
+      alcoholicDrinks: { beers: [], whiskey: [] }
+    }
+  });
 
   // Fetch loyalty points when session is available
   useEffect(() => {
@@ -182,33 +212,327 @@ const UserBooking = () => {
 
   const handleMenu = (e) => {
     const { id, checked } = e.target;
-    const [category, subcategory, item, subItem] = id.split("-");
-
-    setMenu((prevMenu) => {
-      const currentSelection = prevMenu[category]?.[subcategory]?.[item];
-      const updatedSelection = checked
-        ? [
-            ...(Array.isArray(currentSelection) ? currentSelection : []),
-            subItem,
-          ]
-        : (Array.isArray(currentSelection) ? currentSelection : []).filter(
-            (selectedItem) => selectedItem !== subItem
-          );
-
-      return {
-        ...prevMenu,
-        [category]: {
-          ...prevMenu[category],
-          [subcategory]: {
-            ...prevMenu[category]?.[subcategory],
-            [item]: updatedSelection,
+    
+    if (id.startsWith("hall_")) {
+      if (checked) {
+        setHall([...hall, id]);
+      } else {
+        setHall(hall.filter((hallId) => hallId !== id));
+      }
+    } else if (id === "gold_package" || id === "silver_package" || id === "diamond_package") {
+      if (checked) {
+        setSelectedPackage(id);
+        // Reset other package checkboxes and selected menu items
+        const otherPackages = ["gold_package", "silver_package", "diamond_package"].filter(pkg => pkg !== id);
+        otherPackages.forEach(pkg => {
+          const checkbox = document.getElementById(pkg);
+          if (checkbox) checkbox.checked = false;
+        });
+        setSelectedMenuItems({
+          starters: {
+            veg: { items: [] },
+            nonVeg: { chicken: [], fish: [] }
           },
-        },
-      };
-    });
+          mainCourse: {
+            rice: { items: [] },
+            rotiNaanNoodlesPasta: { items: [] },
+            veg: { items: [] },
+            vegetables: { items: [] },
+            nonVeg: { mutton: [], chicken: [], fish: [] }
+          },
+          pickle: { veg: { items: [] }, fermented: { items: [] } },
+          salads: { veg: { items: [] } },
+          dessert: {
+            sweets: { flourBased: [], milkBased: [] },
+            dairy: { items: [] },
+            ice: { items: [] }
+          },
+          beverages: {
+            coldDrinks: { items: [] },
+            teaCoffee: { items: [] },
+            alcoholicDrinks: { beers: [], whiskey: [] }
+          }
+        });
+      } else {
+        setSelectedPackage("");
+      }
+    } else {
+      // Handle menu item selection
+      const parts = id.split("-");
+      if (parts.length >= 2) {
+        let section = parts[0];
+        let category = parts[1];
+        let subcategory = parts[2];
+        let item = e.target.nextElementSibling.textContent.trim();
+
+        setSelectedMenuItems(prev => {
+          const newState = { ...prev };
+          
+          if (subcategory === "items") {
+            // Handle items arrays
+            if (!newState[section][category].items) {
+              newState[section][category].items = [];
+            }
+            if (checked) {
+              newState[section][category].items = [...newState[section][category].items, item];
+            } else {
+              newState[section][category].items = newState[section][category].items.filter(i => i !== item);
+            }
+          } else if (subcategory === "flourBased" || subcategory === "milkBased") {
+            // Handle dessert sweets
+            if (checked) {
+              newState[section][category][subcategory] = [...newState[section][category][subcategory], item];
+            } else {
+              newState[section][category][subcategory] = newState[section][category][subcategory].filter(i => i !== item);
+            }
+          } else if (category === "nonVeg") {
+            // Handle non-veg items
+            if (!newState[section][category][subcategory]) {
+              newState[section][category][subcategory] = [];
+            }
+            if (checked) {
+              newState[section][category][subcategory] = [...newState[section][category][subcategory], item];
+            } else {
+              newState[section][category][subcategory] = newState[section][category][subcategory].filter(i => i !== item);
+            }
+          }
+          
+          return newState;
+        });
+      }
+    }
   };
 
-  
+  // Menu items based on package
+  const getMenuItems = () => {
+    switch (selectedPackage) {
+      case "silver_package":
+        return {
+          starters: {
+            veg: {
+              items: ["Paneer Pakoda", "Veg Spring Roll"],
+            },
+            nonVeg: {
+              chicken: ["Chicken Pakoda", "Chicken Momo"],
+              fish: ["Fish Finger"],
+            },
+          },
+          mainCourse: {
+            rice: {
+              items: ["Plain Rice", "Jeera Rice"],
+            },
+            rotiNaanNoodlesPasta: {
+              items: ["Butter Naan", "Plain Roti"],
+            },
+            veg: {
+              items: ["Paneer Butter Masala", "Dal Makhani"],
+            },
+            vegetables: {
+              items: ["Mix Vegetable", "Aloo Jeera"],
+            },
+            nonVeg: {
+              mutton: ["Mutton Curry"],
+              chicken: ["Chicken Curry", "Butter Chicken"],
+              fish: ["Fish Curry"],
+            },
+          },
+          pickle: {
+            veg: {
+              items: ["Tomato Pickle", "Green Chutney"],
+            },
+            fermented: {
+              items: ["Mango Pickle"],
+            },
+          },
+          salads: {
+            veg: {
+              items: ["Green Salad", "Russian Salad"],
+            },
+          },
+          dessert: {
+            sweets: {
+              flourBased: ["Gulab Jamun"],
+              milkBased: ["Rasmalai"],
+            },
+            dairy: {
+              items: ["Juju Dhau"],
+            },
+            ice: {
+              items: ["Vanilla Ice Cream"],
+            },
+          },
+          beverages: {
+            coldDrinks: {
+              items: ["Coke/Fanta/Sprite"],
+            },
+            teaCoffee: {
+              items: ["Tea", "Coffee"],
+            },
+            alcoholicDrinks: {
+              beers: ["Mustang 330ml"],
+              whiskey: [],
+            },
+          },
+        };
+
+      case "gold_package":
+        return {
+          starters: {
+            veg: {
+              items: ["Paneer Pakoda", "Veg Spring Roll", "Hara Bhara Kebab", "Veg Manchurian"],
+            },
+            nonVeg: {
+              chicken: ["Chicken Pakoda", "Chicken Momo", "Chicken Tikka", "Chicken 65"],
+              fish: ["Fish Finger", "Fish Tikka"],
+            },
+          },
+          mainCourse: {
+            rice: {
+              items: ["Plain Rice", "Jeera Rice", "Pulao"],
+            },
+            rotiNaanNoodlesPasta: {
+              items: ["Butter Naan", "Plain Roti", "Garlic Naan", "Butter Roti"],
+            },
+            veg: {
+              items: ["Paneer Butter Masala", "Dal Makhani", "Paneer Tikka Masala", "Malai Kofta"],
+            },
+            vegetables: {
+              items: ["Mix Vegetable", "Aloo Jeera", "Bhindi Masala", "Baingan Bharta"],
+            },
+            nonVeg: {
+              mutton: ["Mutton Curry", "Mutton Rogan Josh"],
+              chicken: ["Chicken Curry", "Butter Chicken", "Chicken Tikka Masala", "Chicken Do Pyaza"],
+              fish: ["Fish Curry", "Fish Tikka Masala"],
+            },
+          },
+          pickle: {
+            veg: {
+              items: ["Tomato Pickle", "Green Chutney", "Mint Chutney"],
+            },
+            fermented: {
+              items: ["Mango Pickle", "Lemon Pickle"],
+            },
+          },
+          salads: {
+            veg: {
+              items: ["Green Salad", "Russian Salad", "Caesar Salad"],
+            },
+          },
+          dessert: {
+            sweets: {
+              flourBased: ["Gulab Jamun", "Rasgulla"],
+              milkBased: ["Rasmalai", "Kheer"],
+            },
+            dairy: {
+              items: ["Juju Dhau", "Lassi"],
+            },
+            ice: {
+              items: ["Vanilla Ice Cream", "Chocolate Ice Cream"],
+            },
+          },
+          beverages: {
+            coldDrinks: {
+              items: ["Coke/Fanta/Sprite", "Mineral Water"],
+            },
+            teaCoffee: {
+              items: ["Tea", "Coffee", "Masala Chai"],
+            },
+            alcoholicDrinks: {
+              beers: ["Mustang 330ml", "Arna 330ml"],
+              whiskey: ["Nepal Ice"],
+            },
+          },
+        };
+
+      case "diamond_package":
+        return {
+          starters: {
+            veg: {
+              items: ["Paneer Pakoda", "Veg Spring Roll", "Hara Bhara Kebab", "Veg Manchurian", "Crispy Corn", "Veg Seekh Kebab"],
+            },
+            nonVeg: {
+              chicken: ["Chicken Pakoda", "Chicken Momo", "Chicken Tikka", "Chicken 65", "Chicken Seekh Kebab", "Chicken Wings"],
+              fish: ["Fish Finger", "Fish Tikka", "Fish Amritsari"],
+            },
+          },
+          mainCourse: {
+            rice: {
+              items: ["Plain Rice", "Jeera Rice", "Pulao", "Biryani"],
+            },
+            rotiNaanNoodlesPasta: {
+              items: ["Butter Naan", "Plain Roti", "Garlic Naan", "Butter Roti", "Laccha Paratha", "Cheese Naan"],
+            },
+            veg: {
+              items: ["Paneer Butter Masala", "Dal Makhani", "Paneer Tikka Masala", "Malai Kofta", "Paneer Lababdar", "Shahi Paneer"],
+            },
+            vegetables: {
+              items: ["Mix Vegetable", "Aloo Jeera", "Bhindi Masala", "Baingan Bharta", "Mushroom Masala", "Palak Paneer"],
+            },
+            nonVeg: {
+              mutton: ["Mutton Curry", "Mutton Rogan Josh", "Mutton Keema"],
+              chicken: ["Chicken Curry", "Butter Chicken", "Chicken Tikka Masala", "Chicken Do Pyaza", "Chicken Lababdar", "Chicken Kadhai"],
+              fish: ["Fish Curry", "Fish Tikka Masala", "Fish Amritsari"],
+            },
+          },
+          pickle: {
+            veg: {
+              items: ["Tomato Pickle", "Green Chutney", "Mint Chutney", "Coriander Chutney"],
+            },
+            fermented: {
+              items: ["Mango Pickle", "Lemon Pickle", "Mixed Pickle"],
+            },
+          },
+          salads: {
+            veg: {
+              items: ["Green Salad", "Russian Salad", "Caesar Salad", "Greek Salad"],
+            },
+          },
+          dessert: {
+            sweets: {
+              flourBased: ["Gulab Jamun", "Rasgulla", "Jalebi", "Kaju Katli"],
+              milkBased: ["Rasmalai", "Kheer", "Rabri"],
+            },
+            dairy: {
+              items: ["Juju Dhau", "Lassi", "Sweet Lassi"],
+            },
+            ice: {
+              items: ["Vanilla Ice Cream", "Chocolate Ice Cream", "Strawberry Ice Cream"],
+            },
+          },
+          beverages: {
+            coldDrinks: {
+              items: ["Coke/Fanta/Sprite", "Mineral Water", "Fresh Juice"],
+            },
+            teaCoffee: {
+              items: ["Tea", "Coffee", "Masala Chai", "Green Tea"],
+            },
+            alcoholicDrinks: {
+              beers: ["Mustang 330ml", "Arna 330ml", "Tuborg"],
+              whiskey: ["Nepal Ice", "Signature", "Royal Stag"],
+            },
+          },
+          complementary: {
+            items: [
+              "Welcome Drink",
+              "Complimentary Appetizers",
+              "After Dinner Mints",
+              "Complimentary Dessert Platter",
+              "Complimentary Mocktail"
+            ]
+          }
+        };
+
+      default:
+        return menu;
+    }
+  };
+
+  // Update menu when package changes
+  useEffect(() => {
+    if (selectedPackage) {
+      setMenu(getMenuItems());
+    }
+  }, [selectedPackage]);
 
   const handleContinueHalls = (e) => {
     e.preventDefault();
@@ -241,17 +565,6 @@ const UserBooking = () => {
     setShowUserDetails(true);
   };
 
-  const handleCheckboxChange = (e) => {
-    const { id, checked } = e.target;
-    if (id.startsWith("hall_")) {
-      if (checked) {
-        setHall([...hall, id]);
-      } else {
-        setHall(hall.filter((hallId) => hallId !== id));
-      }
-    }
-  };
-
   const handleCheckboxCatering = (e) => {
     const { id, checked } = e.target;
     if (id.startsWith("catering_")) {
@@ -265,6 +578,15 @@ const UserBooking = () => {
 
   const handleSubmit = async (event) => {
     event.preventDefault();
+    setShowTermsModal(true);
+  };
+
+  const handleFinalSubmit = async () => {
+    if (!acceptTerms) {
+      toast.error("Please accept the terms and conditions to proceed");
+      return;
+    }
+
     try {
       setLoading(true);
       
@@ -289,7 +611,7 @@ const UserBooking = () => {
           date,
           hall,
           catering,
-          menu,
+          menu: selectedMenuItems, // Send only selected menu items
           menuInstructions,
           fullName,
           phone1,
@@ -297,7 +619,8 @@ const UserBooking = () => {
           email,
           address,
           image,
-          pointsToRedeem: pointsToRedeem > 0 ? pointsToRedeem : undefined
+          pointsToRedeem: pointsToRedeem > 0 ? pointsToRedeem : undefined,
+          whatsappNotifications: acceptWhatsApp
         }),
       });
 
@@ -335,6 +658,7 @@ const UserBooking = () => {
       toast.error("Failed to create booking. Please try again.");
     } finally {
       setLoading(false);
+      setShowTermsModal(false);
     }
   };
 
@@ -494,7 +818,7 @@ const UserBooking = () => {
               type="checkbox"
               id="gold_package"
               className="form-checkbox h-5 w-5 text-yellow-500"
-              onChange={handleCheckboxChange}
+              onChange={handleMenu}
             />
             <label
               htmlFor="gold_package"
@@ -523,7 +847,7 @@ const UserBooking = () => {
               type="checkbox"
               id="silver_package"
               className="form-checkbox h-5 w-5 text-gray-400"
-              onChange={handleCheckboxChange}
+              onChange={handleMenu}
             />
             <label
               htmlFor="silver_package"
@@ -552,7 +876,7 @@ const UserBooking = () => {
               type="checkbox"
               id="diamond_package"
               className="form-checkbox h-5 w-5 text-blue-700"
-              onChange={handleCheckboxChange}
+              onChange={handleMenu}
             />
             <label
               htmlFor="diamond_package"
@@ -715,8 +1039,10 @@ const UserBooking = () => {
                               <path d="M0 192c0-35.3 28.7-64 64-64c.5 0 1.1 0 1.6 0C73 91.5 105.3 64 144 64c15 0 29 4.1 40.9 11.2C198.2 49.6 225.1 32 256 32s57.8 17.6 71.1 43.2C339 68.1 353 64 368 64c38.7 0 71 27.5 78.4 64c.5 0 1.1 0 1.6 0c35.3 0 64 28.7 64 64c0 11.7-3.1 22.6-8.6 32H8.6C3.1 214.6 0 203.7 0 192zm0 91.4C0 268.3 12.3 256 27.4 256H484.6c15.1 0 27.4 12.3 27.4 27.4c0 70.5-44.4 130.7-106.7 154.1L403.5 452c-2 16-15.6 28-31.8 28H140.2c-16.1 0-29.8-12-31.8-28l-1.8-14.4C44.4 414.1 0 353.9 0 283.4z" />
                             </svg>
                           </div>
-                          <span className="text-xl  font-semibold uppercase">
-                            Starters
+                          <span className="text-xl font-semibold uppercase">
+                            {selectedPackage === "silver_package" ? "Silver Package Menu" :
+                             selectedPackage === "gold_package" ? "Gold Package Menu" :
+                             selectedPackage === "diamond_package" ? "Diamond Package Menu" : "Menu"}
                           </span>
                         </div>
 
@@ -728,96 +1054,72 @@ const UserBooking = () => {
                               className="w-full h-5/6 md:w-8/12"
                             />
                             <div className="w-full md:w-1/2 bg-gradient-to-tr to-amber-200 from-black flex flex-col md:flex-row overflow-auto">
+                              {/* Starters Section */}
                               <div className="w-1/2 ml-10 mt-10 flex flex-col text-white">
-                                <h1 className="text-2xl  font-bold text-red-900 underline uppercase mb-2">
+                                <h1 className="text-2xl font-bold text-red-900 underline uppercase mb-2">
                                   Veg Starters
                                 </h1>
-                                <div className="flex flex-row">
-                                  <input
-                                    type="checkbox"
-                                    id="starters-veg-items-paneerPakoda"
-                                    className="mr-1"
-                                    onChange={handleMenu}
-                                  />
-                                  <label
-                                    className=" text-md"
-                                    htmlFor="starters-veg-items-paneerPakoda"
-                                  >
-                                    Paneer Pakoda
-                                  </label>
-                                </div>
-                                <div className="flex flex-row">
-                                  <input
-                                    type="checkbox"
-                                    id="starters-veg-items-paneerChilli"
-                                    className="mr-1"
-                                    onChange={handleMenu}
-                                  />
-                                  <label
-                                    className=" text-md"
-                                    htmlFor="starters-veg-items-paneerChilli"
-                                  >
-                                    Paneer Chilli
-                                  </label>
-                                </div>
-                                
+                                {menu.starters?.veg?.items.map((item, index) => (
+                                  <div key={index} className="flex flex-row">
+                                    <input
+                                      type="checkbox"
+                                      id={`starters-veg-items-${item.replace(/\s+/g, '')}`}
+                                      className="mr-1"
+                                      onChange={handleMenu}
+                                    />
+                                    <label
+                                      className="text-md"
+                                      htmlFor={`starters-veg-items-${item.replace(/\s+/g, '')}`}
+                                    >
+                                      {item}
+                                    </label>
+                                  </div>
+                                ))}
                               </div>
+
                               <div className="w-full md:w-1/2 ml-4 mt-10 flex flex-col text-white mb-8">
-                                <h1 className="text-2xl  font-bold text-red-900 underline uppercase mb-2">
+                                <h1 className="text-2xl font-bold text-red-900 underline uppercase mb-2">
                                   Non-Veg Starters
                                 </h1>
-                                <h2 className="text-xl  font-semibold text-red-900 uppercase mb-4">
+                                <h2 className="text-xl font-semibold text-red-900 uppercase mb-4">
                                   Chicken Starters
                                 </h2>
-                                <div className="flex flex-row">
-                                  <input
-                                    type="checkbox"
-                                    id="starters-nonVeg-chicken-chickenChilliBoneless"
-                                    className="mr-1"
-                                    onChange={handleMenu}
-                                  />
-                                  <label
-                                    className=" text-md"
-                                    htmlFor="starters-nonVeg-chicken-chickenChilliBoneless"
-                                  >
-                                    Chicken Chilli Boneless
-                                  </label>
-                                </div>
-                                <div className="flex flex-row">
-                                  <input
-                                    type="checkbox"
-                                    id="starters-nonVeg-chicken-chickenMomo"
-                                    className="mr-1"
-                                    onChange={handleMenu}
-                                  />
-                                  <label
-                                    className=" text-md"
-                                    htmlFor="starters-nonVeg-chicken-chickenMomo"
-                                  >
-                                    Chicken Mo:Mo
-                                  </label>
-                                </div>
+                                {menu.starters?.nonVeg?.chicken.map((item, index) => (
+                                  <div key={index} className="flex flex-row">
+                                    <input
+                                      type="checkbox"
+                                      id={`starters-nonVeg-chicken-${item.replace(/\s+/g, '')}`}
+                                      className="mr-1"
+                                      onChange={handleMenu}
+                                    />
+                                    <label
+                                      className="text-md"
+                                      htmlFor={`starters-nonVeg-chicken-${item.replace(/\s+/g, '')}`}
+                                    >
+                                      {item}
+                                    </label>
+                                  </div>
+                                ))}
 
-                                
-
-                                <h2 className="text-xl  font-semibold text-red-900 uppercase mb-4">
+                                <h2 className="text-xl font-semibold text-red-900 uppercase mb-4">
                                   Fish Starters
                                 </h2>
-                                <div className="flex flex-row">
-                                  <input
-                                    type="checkbox"
-                                    id="starters-nonVeg-fish-fishFinger"
-                                    className="mr-1"
-                                    onChange={handleMenu}
-                                  />
-                                  <label
-                                    className=" text-md"
-                                    htmlFor="starters-nonVeg-fish-fishFinger"
-                                  >
-                                    Fish Finger
-                                  </label>
-                                
-                                </div>
+                                {menu.starters?.nonVeg?.fish.map((item, index) => (
+                                  <div key={index} className="flex flex-row">
+                                    <input
+                                      type="checkbox"
+                                      id={`starters-nonVeg-fish-${item.replace(/\s+/g, '')}`}
+                                      className="mr-1"
+                                      onChange={handleMenu}
+                                    />
+                                    <label
+                                      className="text-md"
+                                      htmlFor={`starters-nonVeg-fish-${item.replace(/\s+/g, '')}`}
+                                    >
+                                      {item}
+                                    </label>
+                                  </div>
+                                ))}
                               </div>
                             </div>
                           </div>
@@ -825,6 +1127,7 @@ const UserBooking = () => {
                       </div>
                     </section>
 
+                    {/* Main Course Section */}
                     <section>
                       <div className="mx-10 mt-12 bg-white shadow-2xl rounded-sm">
                         <div className="rounded-sm shadow-xl font-bold py-4 flex flex-row">
@@ -837,7 +1140,7 @@ const UserBooking = () => {
                               <path d="M0 192c0-35.3 28.7-64 64-64c.5 0 1.1 0 1.6 0C73 91.5 105.3 64 144 64c15 0 29 4.1 40.9 11.2C198.2 49.6 225.1 32 256 32s57.8 17.6 71.1 43.2C339 68.1 353 64 368 64c38.7 0 71 27.5 78.4 64c.5 0 1.1 0 1.6 0c35.3 0 64 28.7 64 64c0 11.7-3.1 22.6-8.6 32H8.6C3.1 214.6 0 203.7 0 192zm0 91.4C0 268.3 12.3 256 27.4 256H484.6c15.1 0 27.4 12.3 27.4 27.4c0 70.5-44.4 130.7-106.7 154.1L403.5 452c-2 16-15.6 28-31.8 28H140.2c-16.1 0-29.8-12-31.8-28l-1.8-14.4C44.4 414.1 0 353.9 0 283.4z" />
                             </svg>
                           </div>
-                          <span className="text-xl font-semibold  uppercase">
+                          <span className="text-xl font-semibold uppercase">
                             Main Course
                           </span>
                         </div>
@@ -847,96 +1150,77 @@ const UserBooking = () => {
                             alt=""
                             className="w-full h-5/6 md:w-8/12"
                           />
-                          <div className="w-full md:w-1/2 bg-gradient-to-tr to-amber-200 from-black overflow:auto">
-                            <div className="flex flex-col md:flex-row text-white overflow:auto">
-                              <div className="w-full md:w-1/2 ml-14 mt-10 flex flex-col overflow:auto">
-                                <h1 className="text-2xl  font-bold text-red-900 underline uppercase mb-2">
+                          <div className="w-full md:w-1/2 bg-gradient-to-tr to-amber-200 from-black overflow-auto">
+                            <div className="flex flex-col md:flex-row text-white overflow-auto">
+                              {/* Rice Section */}
+                              <div className="w-full md:w-1/2 ml-14 mt-10 flex flex-col overflow-auto">
+                                <h1 className="text-2xl font-bold text-red-900 underline uppercase mb-2">
                                   RICE
                                 </h1>
-                                <div className="flex flex-row">
-                                  <input
-                                    type="checkbox"
-                                    id="mainCourse-rice-items-plain_rice"
-                                    className="mr-1"
-                                    onChange={handleMenu}
-                                  />
-                                  <label
-                                    className=" text-md"
-                                    htmlFor="mainCourse-rice-items-plain_rice"
-                                  >
-                                    Plain Rice
-                                  </label>
-                                </div>
-                                <div className="flex flex-row">
-                                  <input
-                                    type="checkbox"
-                                    id="mainCourse-rice-items-butter_rice"
-                                    className="mr-1"
-                                    onChange={handleMenu}
-                                  />
-                                </div>
+                                {menu.mainCourse?.rice?.items.map((item, index) => (
+                                  <div key={index} className="flex flex-row">
+                                    <input
+                                      type="checkbox"
+                                      id={`mainCourse-rice-items-${item.replace(/\s+/g, '')}`}
+                                      className="mr-1"
+                                      onChange={handleMenu}
+                                    />
+                                    <label
+                                      className="text-md"
+                                      htmlFor={`mainCourse-rice-items-${item.replace(/\s+/g, '')}`}
+                                    >
+                                      {item}
+                                    </label>
+                                  </div>
+                                ))}
                               </div>
-                            </div>
-                            <div className="flex flex-col md:flex-row text-white">
-                              <div className="w-1/2 ml-14 mt-10 ">
-                                <h1 className="text-2xl  font-bold underline text-red-900 uppercase mb-2">
+
+                              {/* Veg Section */}
+                              <div className="w-1/2 ml-14 mt-10">
+                                <h1 className="text-2xl font-bold underline text-red-900 uppercase mb-2">
                                   Veg
                                 </h1>
-                                <h2 className="text-xl  font-semibold text-red-900 uppercase mb-6">
-                                  DAAL/ LENTILS
-                                </h2>
-                                <div className="flex flex-row">
-                                  <input
-                                    type="checkbox"
-                                    id="mainCourse-veg-items-daal_fry"
-                                    className="mr-1"
-                                    onChange={handleMenu}
-                                  />
-                                  <label
-                                    className=" text-md"
-                                    htmlFor="mainCourse-veg-items-daal_fry"
-                                  >
-                                    Daal Fry
-                                  </label>
-                                </div>
-                                <div className="flex flex-row">
-                                  <input
-                                    type="checkbox"
-                                    id="mainCourse-veg-items-daal_tadka"
-                                    className="mr-1"
-                                    onChange={handleMenu}
-                                  />
-                                  <label
-                                    className=" text-md"
-                                    htmlFor="mainCourse-veg-items-daal_tadka"
-                                  >
-                                    Daal Tadka
-                                  </label>
-                                </div>
-</div>
+                                {menu.mainCourse?.veg?.items.map((item, index) => (
+                                  <div key={index} className="flex flex-row">
+                                    <input
+                                      type="checkbox"
+                                      id={`mainCourse-veg-items-${item.replace(/\s+/g, '')}`}
+                                      className="mr-1"
+                                      onChange={handleMenu}
+                                    />
+                                    <label
+                                      className="text-md"
+                                      htmlFor={`mainCourse-veg-items-${item.replace(/\s+/g, '')}`}
+                                    >
+                                      {item}
+                                    </label>
+                                  </div>
+                                ))}
+                              </div>
                             </div>
                           </div>
                         </div>
                       </div>
                     </section>
 
-                    <section>
-                      <div className="mx-10 mt-12 bg-white shadow-2xl rounded-sm">
-                        <div className="rounded-sm shadow-xl font-bold py-4 flex flex-row">
-                          <div className="mt-1 mx-2">
-                            <svg
-                              xmlns="http://www.w3.org/2000/svg"
-                              viewBox="0 0 512 512"
-                              className="w-5 h-5"
-                            >
-                              <path d="M0 192c0-35.3 28.7-64 64-64c.5 0 1.1 0 1.6 0C73 91.5 105.3 64 144 64c15 0 29 4.1 40.9 11.2C198.2 49.6 225.1 32 256 32s57.8 17.6 71.1 43.2C339 68.1 353 64 368 64c38.7 0 71 27.5 78.4 64c.5 0 1.1 0 1.6 0c35.3 0 64 28.7 64 64c0 11.7-3.1 22.6-8.6 32H8.6C3.1 214.6 0 203.7 0 192zm0 91.4C0 268.3 12.3 256 27.4 256H484.6c15.1 0 27.4 12.3 27.4 27.4c0 70.5-44.4 130.7-106.7 154.1L403.5 452c-2 16-15.6 28-31.8 28H140.2c-16.1 0-29.8-12-31.8-28l-1.8-14.4C44.4 414.1 0 353.9 0 283.4z" />
-                            </svg>
+                    {/* Complementary Items for Diamond Package */}
+                    {selectedPackage === "diamond_package" && (
+                      <section>
+                        <div className="mx-10 mt-12 bg-white shadow-2xl rounded-sm">
+                          <div className="rounded-sm shadow-xl font-bold py-4 flex flex-row">
+                            <div className="mt-1 mx-2">
+                              <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                viewBox="0 0 512 512"
+                                className="w-5 h-5"
+                              >
+                                <path d="M0 192c0-35.3 28.7-64 64-64c.5 0 1.1 0 1.6 0C73 91.5 105.3 64 144 64c15 0 29 4.1 40.9 11.2C198.2 49.6 225.1 32 256 32s57.8 17.6 71.1 43.2C339 68.1 353 64 368 64c38.7 0 71 27.5 78.4 64c.5 0 1.1 0 1.6 0c35.3 0 64 28.7 64 64c0 11.7-3.1 22.6-8.6 32H8.6C3.1 214.6 0 203.7 0 192zm0 91.4C0 268.3 12.3 256 27.4 256H484.6c15.1 0 27.4 12.3 27.4 27.4c0 70.5-44.4 130.7-106.7 154.1L403.5 452c-2 16-15.6 28-31.8 28H140.2c-16.1 0-29.8-12-31.8-28l-1.8-14.4C44.4 414.1 0 353.9 0 283.4z" />
+                              </svg>
+                            </div>
+                            <span className="text-xl font-semibold uppercase">
+                              Complementary Items
+                            </span>
                           </div>
-                          <span className="text-xl font-semibold  uppercase">
-                            Pickle
-                          </span>
-                        </div>
-                        <div>
                           <div className="flex flex-col md:flex-row">
                             <img
                               src="/Image/menu.jpg"
@@ -944,189 +1228,129 @@ const UserBooking = () => {
                               className="w-full h-5/6 md:w-8/12"
                             />
                             <div className="w-full md:w-1/2 bg-gradient-to-tr to-amber-200 from-black overflow-auto">
-                              <div className="flex flex-row">
-                                <div className="w-1/2 ml-14 mt-10 text-white">
-                                  <h1 className="text-2xl  font-bold underline text-red-900 uppercase mb-2">
-                                    VEG
-                                  </h1>
-                                  <h2 className="text-xl  text-red-900 font-semibold uppercase mb-6">
-                                    FRESH NEPALI ACHAR
-                                  </h2>
-                                  <div className="flex flex-row">
+                              <div className="w-full ml-14 mt-10 text-white">
+                                {menu.complementary?.items.map((item, index) => (
+                                  <div key={index} className="flex items-center mb-4">
+                                    <span className="text-xl">• {item}</span>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </section>
+                    )}
+
+                    {/* Sweets Section */}
+                    <section>
+                      <div className="mx-10 mt-12 bg-white shadow-2xl rounded-sm">
+                        <div className="rounded-sm shadow-xl font-bold py-4 flex flex-row">
+                          <div className="mt-1 mx-2">
+                            <svg
+                              xmlns="http://www.w3.org/2000/svg"
+                              viewBox="0 0 512 512"
+                              className="w-5 h-5"
+                            >
+                              <path d="M0 192c0-35.3 28.7-64 64-64c.5 0 1.1 0 1.6 0C73 91.5 105.3 64 144 64c15 0 29 4.1 40.9 11.2C198.2 49.6 225.1 32 256 32s57.8 17.6 71.1 43.2C339 68.1 353 64 368 64c38.7 0 71 27.5 78.4 64c.5 0 1.1 0 1.6 0c35.3 0 64 28.7 64 64c0 11.7-3.1 22.6-8.6 32H8.6C3.1 214.6 0 203.7 0 192zm0 91.4C0 268.3 12.3 256 27.4 256H484.6c15.1 0 27.4 12.3 27.4 27.4c0 70.5-44.4 130.7-106.7 154.1L403.5 452c-2 16-15.6 28-31.8 28H140.2c-16.1 0-29.8-12-31.8-28l-1.8-14.4C44.4 414.1 0 353.9 0 283.4z" />
+                            </svg>
+                          </div>
+                          <span className="text-xl font-semibold uppercase">
+                            Sweets & Desserts
+                          </span>
+                        </div>
+                        <div className="flex flex-col md:flex-row">
+                          <img
+                            src="/Image/menu.jpg"
+                            alt=""
+                            className="w-full h-5/6 md:w-8/12"
+                          />
+                          <div className="w-full md:w-1/2 bg-gradient-to-tr to-amber-200 from-black overflow-auto">
+                            <div className="flex flex-row">
+                              <div className="w-1/2 ml-14 mt-10 text-white">
+                                <h1 className="text-2xl font-bold text-red-900 underline uppercase mb-2">
+                                  Sweets
+                                </h1>
+                                <h2 className="text-xl font-semibold text-red-900 uppercase mb-2">
+                                  Flour Based Sweets
+                                </h2>
+                                {menu.dessert?.sweets?.flourBased.map((item, index) => (
+                                  <div key={index} className="flex flex-row">
                                     <input
                                       type="checkbox"
-                                      id="pickle-veg-items-tomato_pickle"
+                                      id={`dessert-sweets-flourBased-${item.replace(/\s+/g, '')}`}
                                       className="mr-1"
                                       onChange={handleMenu}
                                     />
                                     <label
-                                      className=" text-md"
-                                      htmlFor="pickle-veg-items-tomato_pickle"
+                                      className="text-md"
+                                      htmlFor={`dessert-sweets-flourBased-${item.replace(/\s+/g, '')}`}
                                     >
-                                      Tomato Pickle
+                                      {item}
                                     </label>
                                   </div>
-                                  
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </section>
+                                ))}
 
-                    <section>
-                      <div className="mx-10 mt-12 bg-white shadow-2xl rounded-sm">
-                        <div className="rounded-sm shadow-xl font-bold py-4 flex flex-row">
-                          <div className="mt-1 mx-2">
-                            <svg
-                              xmlns="http://www.w3.org/2000/svg"
-                              viewBox="0 0 512 512"
-                              className="w-5 h-5"
-                            >
-                              <path d="M0 192c0-35.3 28.7-64 64-64c.5 0 1.1 0 1.6 0C73 91.5 105.3 64 144 64c15 0 29 4.1 40.9 11.2C198.2 49.6 225.1 32 256 32s57.8 17.6 71.1 43.2C339 68.1 353 64 368 64c38.7 0 71 27.5 78.4 64c.5 0 1.1 0 1.6 0c35.3 0 64 28.7 64 64c0 11.7-3.1 22.6-8.6 32H8.6C3.1 214.6 0 203.7 0 192zm0 91.4C0 268.3 12.3 256 27.4 256H484.6c15.1 0 27.4 12.3 27.4 27.4c0 70.5-44.4 130.7-106.7 154.1L403.5 452c-2 16-15.6 28-31.8 28H140.2c-16.1 0-29.8-12-31.8-28l-1.8-14.4C44.4 414.1 0 353.9 0 283.4z" />
-                            </svg>
-                          </div>
-                          <span className="text-xl font-semibold  uppercase">
-                            Salad
-                          </span>
-                        </div>
-                        <div>
-                          <div className="flex flex-col md:flex-row">
-                            <img
-                              src="/Image/menu.jpg"
-                              alt=""
-                              className="w-full h-5/6 md:w-8/12"
-                            />
-                            <div className="w-full md:w-1/2 bg-gradient-to-tr to-amber-200 from-black overflow:auto">
-                              <div className="w-1/2 ml-14 mt-10 text-white">
-                                <h2 className="text-2xl  font-bold text-red-900 underline uppercase mb-6">
-                                  VEG SALAD
+                                <h2 className="text-xl font-semibold text-red-900 uppercase mb-2">
+                                  Milk Based Sweets
                                 </h2>
-                                <div className=" flex flex-row">
-                                  <input
-                                    type="checkbox"
-                                    id="salads-veg-items-greenSalad"
-                                    className="mr-1"
-                                    onChange={handleMenu}
-                                  />
-                                  <label
-                                    className=" text-md"
-                                    htmlFor="salads-veg-items-greenSalad"
-                                  >
-                                    Green Salad
-                                  </label>
-                                </div>
-                                <div className="flex flex-row">
-                                  <input
-                                    type="checkbox"
-                                    id="salads-veg-items-russianSalad"
-                                    className="mr-1"
-                                    onChange={handleMenu}
-                                  />
-                                  <label
-                                    className=" text-md"
-                                    htmlFor="salads-veg-items-russianSalad"
-                                  >
-                                    Russian Salad
-                                  </label>
-                                </div>
+                                {menu.dessert?.sweets?.milkBased.map((item, index) => (
+                                  <div key={index} className="flex flex-row">
+                                    <input
+                                      type="checkbox"
+                                      id={`dessert-sweets-milkBased-${item.replace(/\s+/g, '')}`}
+                                      className="mr-1"
+                                      onChange={handleMenu}
+                                    />
+                                    <label
+                                      className="text-md"
+                                      htmlFor={`dessert-sweets-milkBased-${item.replace(/\s+/g, '')}`}
+                                    >
+                                      {item}
+                                    </label>
+                                  </div>
+                                ))}
                               </div>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </section>
 
-                    <section>
-                      <div className="mx-10 mt-12 bg-white shadow-2xl rounded-sm">
-                        <div className="rounded-sm shadow-xl font-bold py-4 flex flex-row">
-                          <div className="mt-1 mx-2">
-                            <svg
-                              xmlns="http://www.w3.org/2000/svg"
-                              viewBox="0 0 512 512"
-                              className="w-5 h-5"
-                            >
-                              <path d="M0 192c0-35.3 28.7-64 64-64c.5 0 1.1 0 1.6 0C73 91.5 105.3 64 144 64c15 0 29 4.1 40.9 11.2C198.2 49.6 225.1 32 256 32s57.8 17.6 71.1 43.2C339 68.1 353 64 368 64c38.7 0 71 27.5 78.4 64c.5 0 1.1 0 1.6 0c35.3 0 64 28.7 64 64c0 11.7-3.1 22.6-8.6 32H8.6C3.1 214.6 0 203.7 0 192zm0 91.4C0 268.3 12.3 256 27.4 256H484.6c15.1 0 27.4 12.3 27.4 27.4c0 70.5-44.4 130.7-106.7 154.1L403.5 452c-2 16-15.6 28-31.8 28H140.2c-16.1 0-29.8-12-31.8-28l-1.8-14.4C44.4 414.1 0 353.9 0 283.4z" />
-                            </svg>
-                          </div>
-                          <span className="text-xl font-semibold  uppercase">
-                            Dessert
-                          </span>
-                        </div>
-                        <div className="flex flex-col md:flex-row">
-                          <img
-                            src="/Image/menu.jpg"
-                            alt=""
-                            className="w-full h-5/6 md:w-8/12"
-                          />
-                          <div className="w-full md:w-1/2 bg-gradient-to-tr to-amber-200 from-black overflow-auto">
-                            <div className="flex flex-row">
-                              <div className="w-1/2 ml-14 mt-10 text-white">
-                                <h1 className="text-2xl  font-bold text-red-900 underline uppercase mb-2">
-                                  Sweets
-                                </h1>
-                                <h2 className="text-xl  font-semibold text-red-900 uppercase mb-2">
-                                  Flour Based Sweets
-                                </h2>
-                                <div className="flex flex-row">
-                                  <input
-                                    type="checkbox"
-                                    id="dessert-sweets-flourBased-lalMohan"
-                                    className="mr-1"
-                                    onChange={handleMenu}
-                                  />
-                                  <label
-                                    className=" text-md"
-                                    htmlFor="dessert-sweets-flourBased-lalMohan"
-                                  >
-                                    Lal Mohan
-                                  </label>
-                                </div>
-                              </div>
-                            </div>
-                            <div className="flex flex-row">
-                              <div className="w-1/2 ml-14 mt-10 text-white">
-                                <h1 className="text-xl  font-semibold text-red-400 uppercase mb-2">
-                                  Curd
-                                </h1>
-
-                                <div className="flex flex-row">
-                                  <input
-                                    type="checkbox"
-                                    id="dessert-dairy-items-jujuDhau"
-                                    className="mr-1"
-                                    onChange={handleMenu}
-                                  />
-                                  <label
-                                    className=" text-md"
-                                    htmlFor="dessert-dairy-items-jujuDhau"
-                                  >
-                                    Juju Dhau
-                                  </label>
-                                </div>
-                                
-                              </div>
                               <div className="w-1/2 ml-4 mt-10 text-white">
-                                <h1 className="text-xl  text-red-900 font-semibold uppercase mb-2">
-                                  Ice-cream
+                                <h1 className="text-xl font-semibold text-red-900 uppercase mb-2">
+                                  Dairy
                                 </h1>
+                                {menu.dessert?.dairy?.items.map((item, index) => (
+                                  <div key={index} className="flex flex-row">
+                                    <input
+                                      type="checkbox"
+                                      id={`dessert-dairy-items-${item.replace(/\s+/g, '')}`}
+                                      className="mr-1"
+                                      onChange={handleMenu}
+                                    />
+                                    <label
+                                      className="text-md"
+                                      htmlFor={`dessert-dairy-items-${item.replace(/\s+/g, '')}`}
+                                    >
+                                      {item}
+                                    </label>
+                                  </div>
+                                ))}
 
-                                <div className="flex flex-row">
-                                  <input
-                                    type="checkbox"
-                                    id="dessert-ice-items-iceCream"
-                                    className="mr-1"
-                                    onChange={handleMenu}
-                                  />
-                                  <label
-                                    className=" text-md"
-                                    htmlFor="dessert-ice-items-iceCream"
-                                  >
-                                    Ice Cream
-                                  </label>
-                                </div>
-                                
+                                <h1 className="text-xl font-semibold text-red-900 uppercase mb-2">
+                                  Ice Cream
+                                </h1>
+                                {menu.dessert?.ice?.items.map((item, index) => (
+                                  <div key={index} className="flex flex-row">
+                                    <input
+                                      type="checkbox"
+                                      id={`dessert-ice-items-${item.replace(/\s+/g, '')}`}
+                                      className="mr-1"
+                                      onChange={handleMenu}
+                                    />
+                                    <label
+                                      className="text-md"
+                                      htmlFor={`dessert-ice-items-${item.replace(/\s+/g, '')}`}
+                                    >
+                                      {item}
+                                    </label>
+                                  </div>
+                                ))}
                               </div>
                             </div>
                           </div>
@@ -1134,6 +1358,7 @@ const UserBooking = () => {
                       </div>
                     </section>
 
+                    {/* Beverages Section */}
                     <section>
                       <div className="mx-10 mt-12 bg-white shadow-2xl rounded-sm">
                         <div className="rounded-sm shadow-xl font-bold py-4 flex flex-row">
@@ -1146,8 +1371,8 @@ const UserBooking = () => {
                               <path d="M0 192c0-35.3 28.7-64 64-64c.5 0 1.1 0 1.6 0C73 91.5 105.3 64 144 64c15 0 29 4.1 40.9 11.2C198.2 49.6 225.1 32 256 32s57.8 17.6 71.1 43.2C339 68.1 353 64 368 64c38.7 0 71 27.5 78.4 64c.5 0 1.1 0 1.6 0c35.3 0 64 28.7 64 64c0 11.7-3.1 22.6-8.6 32H8.6C3.1 214.6 0 203.7 0 192zm0 91.4C0 268.3 12.3 256 27.4 256H484.6c15.1 0 27.4 12.3 27.4 27.4c0 70.5-44.4 130.7-106.7 154.1L403.5 452c-2 16-15.6 28-31.8 28H140.2c-16.1 0-29.8-12-31.8-28l-1.8-14.4C44.4 414.1 0 353.9 0 283.4z" />
                             </svg>
                           </div>
-                          <span className="text-xl font-semibold  uppercase">
-                            Beverage
+                          <span className="text-xl font-semibold uppercase">
+                            Beverages
                           </span>
                         </div>
                         <div className="flex flex-col md:flex-row">
@@ -1158,85 +1383,99 @@ const UserBooking = () => {
                           />
                           <div className="w-full md:w-1/2 bg-gradient-to-tr to-amber-200 from-black overflow-auto">
                             <div className="flex flex-row">
-                              <div className="w-1/2 ml-14 mt-10">
-                                <h1 className="text-2xl  font-bold text-red-900 underline uppercase mb-4">
+                              <div className="w-1/2 ml-14 mt-10 text-white">
+                                <h1 className="text-2xl font-bold text-red-900 underline uppercase mb-4">
                                   Cold Drinks
                                 </h1>
-                                <div className="fex flex-row">
-                                  <input
-                                    type="checkbox"
-                                    id="beverages-coldDrinks-items-coke"
-                                    className="mr-1"
-                                    onChange={handleMenu}
-                                  />
-                                  <label
-                                    className=" text-md"
-                                    htmlFor="beverages-coldDrinks-items-coke"
-                                  >
-                                    Coke/Fanta/Sprite
-                                  </label>
-                                </div>
+                                {menu.beverages?.coldDrinks?.items.map((item, index) => (
+                                  <div key={index} className="flex flex-row">
+                                    <input
+                                      type="checkbox"
+                                      id={`beverages-coldDrinks-items-${item.replace(/\s+/g, '')}`}
+                                      className="mr-1"
+                                      onChange={handleMenu}
+                                    />
+                                    <label
+                                      className="text-md"
+                                      htmlFor={`beverages-coldDrinks-items-${item.replace(/\s+/g, '')}`}
+                                    >
+                                      {item}
+                                    </label>
+                                  </div>
+                                ))}
                               </div>
-                              <div className="w-full md:w-1/2 ml-4 mt-10">
-                                <h2 className="text-xl  text-red-900 font-semibold uppercase mb-5">
+
+                              <div className="w-1/2 ml-4 mt-10 text-white">
+                                <h2 className="text-xl font-semibold text-red-900 uppercase mb-4">
                                   Tea/Coffee
                                 </h2>
-                                <div className="flex flex-row">
-                                  <input
-                                    type="checkbox"
-                                    id="beverages-teaCoffee-items-tea"
-                                    className="mr-1"
-                                    onChange={handleMenu}
-                                  />
-                                  <label
-                                    className=" text-md"
-                                    htmlFor="beverages-teaCoffee-items-tea"
-                                  >
-                                    Tea
-                                  </label>
-                                </div>
-                                
+                                {menu.beverages?.teaCoffee?.items.map((item, index) => (
+                                  <div key={index} className="flex flex-row">
+                                    <input
+                                      type="checkbox"
+                                      id={`beverages-teaCoffee-items-${item.replace(/\s+/g, '')}`}
+                                      className="mr-1"
+                                      onChange={handleMenu}
+                                    />
+                                    <label
+                                      className="text-md"
+                                      htmlFor={`beverages-teaCoffee-items-${item.replace(/\s+/g, '')}`}
+                                    >
+                                      {item}
+                                    </label>
+                                  </div>
+                                ))}
                               </div>
                             </div>
-                            <div className="flex flex-row mt-10">
-                              <div className="w-full ml-14">
-                                <h1 className="text-2xl  font-bold text-red-900 underline uppercase mb-4">
-                                  ALCOHOLIC DRINKS
-                                </h1>
 
+                            <div className="flex flex-row mt-10">
+                              <div className="w-full ml-14 text-white">
+                                <h1 className="text-2xl font-bold text-red-900 underline uppercase mb-4">
+                                  Alcoholic Drinks
+                                </h1>
                                 <div className="flex flex-col md:flex-row">
-                                  <div className="w-1/2 text-white">
-                                    <h2 className="text-xl  text-red-900 font-semibold uppercase mb-2">
+                                  <div className="w-1/2">
+                                    <h2 className="text-xl font-semibold text-red-900 uppercase mb-2">
                                       Beers
                                     </h2>
-                                    <div className="flex flex-row">
-                                      <input
-                                        type="checkbox"
-                                        id="beverages-alcoholicDrinks-beers-mustang"
-                                        className="mr-1"
-                                        onChange={handleMenu}
-                                      />
-                                      <label
-                                        className=" text-md"
-                                        htmlFor="beverages-alcoholicDrinks-beers-mustang"
-                                      >
-                                        Mustang 330ml
-                                      </label>
-                                    </div>
-                                    <div className="flex flex-row">
-                                      <input
-                                        type="checkbox"
-                                        id="beverages-alcoholicDrinks-beers-arna"
-                                        className="mr-1"
-                                        onChange={handleMenu}
-                                      />
-                                      <label
-                                        className=" text-md"
-                                        htmlFor="beverages-alcoholicDrinks-beers-arna"
-                                      >
-                                        Arna 330ml
-                                      </label>
-                                    </div>
+                                    {menu.beverages?.alcoholicDrinks?.beers.map((item, index) => (
+                                      <div key={index} className="flex flex-row">
+                                        <input
+                                          type="checkbox"
+                                          id={`beverages-alcoholicDrinks-beers-${item.replace(/\s+/g, '')}`}
+                                          className="mr-1"
+                                          onChange={handleMenu}
+                                        />
+                                        <label
+                                          className="text-md"
+                                          htmlFor={`beverages-alcoholicDrinks-beers-${item.replace(/\s+/g, '')}`}
+                                        >
+                                          {item}
+                                        </label>
+                                      </div>
+                                    ))}
+                                  </div>
+
+                                  <div className="w-1/2">
+                                    <h2 className="text-xl font-semibold text-red-900 uppercase mb-2">
+                                      Whiskey
+                                    </h2>
+                                    {menu.beverages?.alcoholicDrinks?.whiskey.map((item, index) => (
+                                      <div key={index} className="flex flex-row">
+                                        <input
+                                          type="checkbox"
+                                          id={`beverages-alcoholicDrinks-whiskey-${item.replace(/\s+/g, '')}`}
+                                          className="mr-1"
+                                          onChange={handleMenu}
+                                        />
+                                        <label
+                                          className="text-md"
+                                          htmlFor={`beverages-alcoholicDrinks-whiskey-${item.replace(/\s+/g, '')}`}
+                                        >
+                                          {item}
+                                        </label>
+                                      </div>
+                                    ))}
                                   </div>
                                 </div>
                               </div>
@@ -1245,7 +1484,6 @@ const UserBooking = () => {
                         </div>
                       </div>
                     </section>
-
                     <div className="mt-4 py-2 mx-10">
                       <button
                         onClick={handleContinueInfo}
@@ -1497,7 +1735,7 @@ const UserBooking = () => {
                         onClick={handleSubmit}
                         className="bg-black text-white rounded-md shadow-md py-1 p-12 hover:scale-110 duration-300 transition-transform hover:bg-gradient-to-tr to-black from-red-600"
                       >
-                        <span className="text-xl ">Continue</span>
+                        <span className="text-xl ">Book</span>
                       </button>
                     </div>
                   </div>
@@ -1510,6 +1748,111 @@ const UserBooking = () => {
         <ToastContainer />
         {error && <div className="text-red-500">{error}</div>}
       </div>
+
+      {/* Terms and Conditions Modal */}
+      {showTermsModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-2xl max-w-3xl w-full mx-auto transform transition-all">
+            {/* Header */}
+            <div className="border-b border-gray-200 px-6 py-4">
+              <h2 className="text-2xl font-bold text-gray-800">Terms and Conditions</h2>
+            </div>
+
+            {/* Content */}
+            <div className="px-6 py-4">
+              <div className="bg-gray-50 rounded-lg p-4 max-h-[400px] overflow-y-auto mb-6">
+                <div className="space-y-4 text-gray-600">
+                  <div className="bg-white p-4 rounded-lg shadow-sm">
+                    <h3 className="font-semibold text-gray-800 mb-2">1. Booking Confirmation</h3>
+                    <p>Your booking is subject to availability and confirmation by the venue.</p>
+                  </div>
+
+                  <div className="bg-white p-4 rounded-lg shadow-sm">
+                    <h3 className="font-semibold text-gray-800 mb-2">2. Payment Terms</h3>
+                    <p>Advance payment is required to confirm your booking. The remaining balance must be paid as per the venue's policy.</p>
+                  </div>
+
+                  <div className="bg-white p-4 rounded-lg shadow-sm">
+                    <h3 className="font-semibold text-gray-800 mb-2">3. Cancellation Policy</h3>
+                    <p>Cancellations must be made at least 48 hours before the event. Refund policies vary based on the timing of cancellation.</p>
+                  </div>
+
+                  <div className="bg-white p-4 rounded-lg shadow-sm">
+                    <h3 className="font-semibold text-gray-800 mb-2">4. Guest Count</h3>
+                    <p>The final guest count must be confirmed 24 hours before the event. Additional charges may apply for extra guests.</p>
+                  </div>
+
+                  <div className="bg-white p-4 rounded-lg shadow-sm">
+                    <h3 className="font-semibold text-gray-800 mb-2">5. Venue Rules</h3>
+                    <p>All guests must adhere to the venue's rules and regulations. The venue reserves the right to terminate services for violations.</p>
+                  </div>
+
+                  <div className="bg-white p-4 rounded-lg shadow-sm">
+                    <h3 className="font-semibold text-gray-800 mb-2">6. Liability</h3>
+                    <p>The venue is not responsible for any personal belongings or valuables brought to the event.</p>
+                  </div>
+
+                  <div className="bg-white p-4 rounded-lg shadow-sm">
+                    <h3 className="font-semibold text-gray-800 mb-2">7. Force Majeure</h3>
+                    <p>The venue is not liable for any failure to perform due to circumstances beyond reasonable control.</p>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="space-y-4">
+                <div className="flex items-start space-x-3">
+                  <input
+                    type="checkbox"
+                    id="terms"
+                    checked={acceptTerms}
+                    onChange={(e) => setAcceptTerms(e.target.checked)}
+                    className="h-5 w-5 text-blue-600 rounded border-gray-300 focus:ring-blue-500 mt-1"
+                  />
+                  <label htmlFor="terms" className="text-gray-700">
+                    I have read and agree to the terms and conditions
+                  </label>
+                </div>
+                
+                <div className="flex items-start space-x-3">
+                  <input
+                    type="checkbox"
+                    id="whatsapp"
+                    checked={acceptWhatsApp}
+                    onChange={(e) => setAcceptWhatsApp(e.target.checked)}
+                    className="h-5 w-5 text-blue-600 rounded border-gray-300 focus:ring-blue-500 mt-1"
+                  />
+                  <label htmlFor="whatsapp" className="text-gray-700">
+                    I agree to receive booking updates via WhatsApp
+                  </label>
+                </div>
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="border-t border-gray-200 px-6 py-4 bg-gray-50 rounded-b-xl">
+              <div className="flex justify-end space-x-4">
+                <button
+                  onClick={() => setShowTermsModal(false)}
+                  className="px-6 py-2.5 text-gray-700 hover:text-gray-900 font-medium transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleFinalSubmit}
+                  disabled={!acceptTerms}
+                  className={`px-6 py-2.5 rounded-lg font-medium transition-all ${
+                    acceptTerms
+                      ? "bg-black text-white hover:bg-gray-800 transform hover:scale-105"
+                      : "bg-gray-300 text-gray-500 cursor-not-allowed"
+                  }`}
+                >
+                  Confirm Booking
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 };

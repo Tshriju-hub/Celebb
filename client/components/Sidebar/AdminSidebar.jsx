@@ -3,23 +3,49 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import Image from "next/image";
+import { FaUsers, FaNewspaper, FaHome, FaChartBar } from 'react-icons/fa';
+import { MdDashboard } from 'react-icons/md';
+import { BsBuilding } from 'react-icons/bs';
 
-export default function Sidebar() {
+export default function AdminSidebar() {
   const pathname = usePathname();
 
   const navItems = [
-    { name: "Dashboard", href: "/admin/dashboard" },
-    { name: "Venues", href: "/admin/venues" },
-    { name: "News", href: "/admin/news" },
+    { 
+      name: "Dashboard", 
+      href: "/admin/dashboard",
+      icon: <MdDashboard className="w-5 h-5" />
+    },
+    { 
+      name: "Users", 
+      href: "/admin/users",
+      icon: <FaUsers className="w-5 h-5" />
+    },
+    { 
+      name: "Venues", 
+      href: "/admin/venues",
+      icon: <BsBuilding className="w-5 h-5" />
+    },
+    { 
+      name: "News", 
+      href: "/admin/news",
+      icon: <FaNewspaper className="w-5 h-5" />
+    },
+    { 
+      name: "Analytics", 
+      href: "/admin/analytics",
+      icon: <FaChartBar className="w-5 h-5" />
+    }
   ];
 
   return (
-    <aside className="w-64 bg-[#7a1313] shadow-lg">
-      <div className="p-4">
-        <div className="flex justify-center mb-4">
-          <Link href="/">
+    <aside className="w-64 bg-white border-r border-gray-200 min-h-screen shadow-sm">
+      <div className="flex flex-col h-full">
+        {/* Logo Section */}
+        <div className="p-4 border-b border-gray-200">
+          <Link href="/" className="flex justify-center">
             <Image
-              src="/Image/logo.png" // Add your logo source path here
+              src="/Image/logo.png"
               alt="Home Logo"
               width={100}
               height={100}
@@ -28,24 +54,43 @@ export default function Sidebar() {
           </Link>
         </div>
 
-        <nav>
+        {/* Navigation Section */}
+        <nav className="flex-1 p-4">
           <ul className="space-y-2">
             {navItems.map((item) => (
               <li key={item.name}>
                 <Link
                   href={item.href}
-                  className={`block px-4 py-2 rounded-lg transition-colors ${
+                  className={`flex items-center space-x-3 px-4 py-3 rounded-lg transition-all duration-200 group ${
                     pathname === item.href
-                      ? "bg-white text-[#7a1313]"  // active link color
-                      : "text-white hover:bg-[#9b1e1e]"  // text color & hover
+                      ? "bg-[#7a1313] text-white shadow-md" 
+                      : "text-gray-700 hover:bg-gray-100"
                   }`}
                 >
-                  {item.name}
+                  <span className={`${
+                    pathname === item.href
+                      ? "text-white"
+                      : "text-gray-500 group-hover:text-[#7a1313]"
+                  }`}>
+                    {item.icon}
+                  </span>
+                  <span className="font-medium">{item.name}</span>
                 </Link>
               </li>
             ))}
           </ul>
         </nav>
+
+        {/* Bottom Section */}
+        <div className="p-4 border-t border-gray-200">
+          <Link
+            href="/"
+            className="flex items-center space-x-3 px-4 py-3 rounded-lg text-gray-700 hover:bg-gray-100 transition-all duration-200 group"
+          >
+            <FaHome className="w-5 h-5 text-gray-500 group-hover:text-[#7a1313]" />
+            <span className="font-medium">Back to Home</span>
+          </Link>
+        </div>
       </div>
     </aside>
   );

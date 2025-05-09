@@ -158,90 +158,104 @@ const VenueManagement = () => {
 
         {/* Main content */}
         {loading ? (
-          <p className="text-center text-lg text-gray-700">Loading venues...</p>
+          <div className="flex justify-center items-center h-64">
+            <div className="animate-spin rounded-full h-12 w-12 border-4 border-[#7a1313] border-t-transparent"></div>
+          </div>
         ) : venues.length === 0 ? (
-          <p className="text-center text-lg text-gray-700">No venues available.</p>
+          <div className="text-center py-12">
+            <p className="text-xl text-gray-600">No venues available.</p>
+          </div>
         ) : (
           venues.map((venue) => (
             <div
               key={venue._id}
-              className="bg-white p-6 rounded-lg shadow-lg mb-6 space-y-4"
+              className="bg-white p-6 rounded-xl shadow-lg mb-6 hover:shadow-xl transition-all duration-300 border border-gray-100"
             >
               {/* Venue Header */}
-              <div className="flex justify-between items-center">
-                <h2 className="text-2xl text-[#7a1313] font-semibold">{venue.name}</h2>
+              <div className="flex justify-between items-center border-b pb-4">
+                <div>
+                  <h2 className="text-2xl text-[#7a1313] font-semibold">{venue.name}</h2>
+                  <p className="text-gray-600 mt-1">{venue.address}</p>
+                </div>
                 <span
-                  className={`text-sm font-medium px-3 py-1 rounded-full ${
+                  className={`text-sm font-medium px-4 py-1.5 rounded-full ${
                     venue.status === "approved"
-                      ? "bg-green-100 text-green-700"
+                      ? "bg-green-100 text-green-700 border border-green-200"
                       : venue.status === "rejected"
-                      ? "bg-red-100 text-red-700"
-                      : "bg-yellow-100 text-yellow-700"
+                      ? "bg-red-100 text-red-700 border border-red-200"
+                      : "bg-yellow-100 text-yellow-700 border border-yellow-200"
                   }`}
                 >
                   {venue.status.charAt(0).toUpperCase() + venue.status.slice(1)}
                 </span>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <p className="font-medium text-gray-700">
-                    <strong>Owner:</strong> {venue.ownerName}
-                  </p>
-                  <p className="text-gray-600">
-                    <strong>Email:</strong> {venue.ownerEmail}
-                  </p>
-                  <p className="text-gray-600">
-                    <strong>Phone:</strong> {venue.ownerPhone}
-                  </p>
-                  <p className="text-gray-600">
-                    <strong>Address:</strong> {venue.address}
-                  </p>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
+                <div className="space-y-3">
+                  <div className="flex items-center space-x-2">
+                    <span className="text-gray-500">👤</span>
+                    <div>
+                      <p className="font-medium text-gray-700">{venue.ownerName}</p>
+                      <p className="text-sm text-gray-500">Owner</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <span className="text-gray-500">📧</span>
+                    <p className="text-gray-600">{venue.ownerEmail}</p>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <span className="text-gray-500">📱</span>
+                    <p className="text-gray-600">{venue.ownerPhone}</p>
+                  </div>
                 </div>
-                <div>
-                  <p className="font-medium text-gray-700">
-                    <strong>Capacity:</strong> {venue.capacity}
-                  </p>
-                  <p className="text-gray-600">
-                    <strong>Halls:</strong> {venue.numberOfHalls}
-                  </p>
-                  <p className="text-gray-600">
-                    <strong>Advance Payment:</strong> Rs.{venue.advancePayment}
-                  </p>
+
+                <div className="space-y-3 bg-gray-50 p-4 rounded-lg">
+                  <div>
+                    <p className="text-sm text-gray-500">Venue Capacity</p>
+                    <p className="font-medium text-gray-700">{venue.capacity} guests</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-500">Number of Halls</p>
+                    <p className="font-medium text-gray-700">{venue.numberOfHalls}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-500">Advance Payment</p>
+                    <p className="font-medium text-gray-700">Rs. {venue.advancePayment}</p>
+                  </div>
                 </div>
               </div>
 
               {/* Buttons */}
-              <div className="flex justify-end space-x-4 mt-6">
+              <div className="flex justify-end space-x-3 mt-6 pt-4 border-t">
                 <button
                   onClick={() => {
                     setEditingVenue(venue);
                     setIsEditModalOpen(true);
                   }}
-                  className="bg-yellow-500 hover:bg-yellow-600 text-white px-6 py-2 rounded-md shadow-md transition-colors"
+                  className="px-4 py-2 text-[#7a1313] border border-[#7a1313] rounded-lg hover:bg-[#7a1313] hover:text-white transition-all duration-200"
                 >
                   Edit
                 </button>
                 <button
                   onClick={() => handleDelete(venue._id)}
-                  className="bg-red-500 hover:bg-red-600 text-white px-6 py-2 rounded-md shadow-md transition-colors"
+                  className="px-4 py-2 text-red-600 border border-red-200 rounded-lg hover:bg-red-50 transition-all duration-200"
                 >
                   Delete
                 </button>
                 <button
                   onClick={() => openPreviewModal(venue)}
-                  className="bg-blue-500 hover:bg-blue-600 text-white px-6 py-2 rounded-md shadow-md transition-colors"
+                  className="px-4 py-2 text-blue-600 border border-blue-200 rounded-lg hover:bg-blue-50 transition-all duration-200"
                 >
                   Preview
                 </button>
-                {/* {venue.status === "pending" && (
+                {venue.status === "pending" && (
                   <button
                     onClick={() => approveVenue(venue._id)}
-                    className="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-md shadow-md transition-colors"
+                    className="px-4 py-2 bg-[#7a1313] text-white rounded-lg hover:bg-[#5a0e0e] transition-all duration-200"
                   >
                     Approve
                   </button>
-                )} */}
+                )}
               </div>
             </div>
           ))

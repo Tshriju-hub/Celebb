@@ -12,6 +12,7 @@ const userRoutes = require('./routes/user');
 const reviewRoutes = require('./routes/reviews');
 const loyaltyRoutes = require('./routes/loyaltyRoutes');
 const notificationRoutes = require('./routes/notifications');
+const analyticsRoutes = require('./routes/analyticsRoutes');
 
 dotenv.config();
 
@@ -39,6 +40,7 @@ app.use('/api/bookings', require('./routes/bookings'));
 app.use('/api/news', require('./routes/news'));
 app.use('/api/loyalty', loyaltyRoutes);
 app.use('/api/notifications', notificationRoutes);
+app.use('/api/analytics', analyticsRoutes);
 
 
 app.use('/uploads', express.static('uploads')); // Serve static files from the uploads directory

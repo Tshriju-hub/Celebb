@@ -72,7 +72,8 @@ const createBooking = async (req, res) => {
       phone2,
       address,
       pointsToRedeem,
-      venueId
+      venueId,
+      whatsappNotifications
     } = req.body;
 
     console.log('Server: Creating booking with owner ID:', owner);
@@ -183,7 +184,8 @@ const createBooking = async (req, res) => {
       phone2: phone2 || "",
       address: address || "",
       loyaltyPointsRedeemed: pointsToRedeem || 0,
-      discountAmount: discountAmount
+      discountAmount: discountAmount,
+      whatsappNotifications: whatsappNotifications || false
     });
 
     // Save booking to DB
@@ -228,15 +230,20 @@ const createBooking = async (req, res) => {
       console.error('Server: User not authenticated for notification');
     }
 
-    // Send WhatsApp notifications
+    // Always send WhatsApp notification to admin
     try {
-      // Send notification to admin
-      await sendMessage("9860462875", "Alert: A new booking has been received. Please check the owner dashboard.");
-      
-      // Send notification to customer
-      await sendMessage(phone1, `Hello ${fullName}, your booking request has been submitted! We'll review it and get back to you soon. Thank you for choosing us.`);
+      await sendMessage("9860462875", `Alert: A new booking has been received from ${fullName} for ${eventType} on ${date}. Total guests: ${totalGuests}. Please check the owner dashboard.`);
     } catch (whatsappError) {
-      console.error('Server: Error sending WhatsApp notifications:', whatsappError);
+      console.error('Server: Error sending WhatsApp notification to admin:', whatsappError);
+    }
+
+    // Send WhatsApp notification to customer only if they opted in
+    if (whatsappNotifications) {
+      try {
+        await sendMessage(phone1, `Hello ${fullName}, your booking request has been submitted! We'll review it and get back to you soon. Thank you for choosing us.`);
+      } catch (whatsappError) {
+        console.error('Server: Error sending WhatsApp notification to customer:', whatsappError);
+      }
     }
 
     res.status(201).json({
@@ -370,21 +377,34 @@ const updateBookingStatus = async (req, res) => {
       );
     }
 
-    // Send WhatsApp notification based on status
+    // Always send WhatsApp notification to admin for status changes
     try {
-      if (status === 'approved') {
-        await sendMessage(
-          booking.phone1,
-          `Hello ${booking.fullName}, your booking for ${booking.eventType} has been approved! We look forward to hosting your event. Thank you for choosing us.`
-        );
-      } else if (status === 'declined') {
-        await sendMessage(
-          booking.phone1,
-          `Hello ${booking.fullName}, we regret to inform you that your booking for ${booking.eventType} could not be accommodated at this time. Please contact us for alternative arrangements.`
-        );
-      }
+      const statusMessage = status === 'approved' 
+        ? `Booking for ${booking.eventType} by ${booking.fullName} has been approved.`
+        : `Booking for ${booking.eventType} by ${booking.fullName} has been declined.`;
+        
+      await sendMessage("9860462875", `Status Update: ${statusMessage}`);
     } catch (whatsappError) {
-      console.error('Server: Error sending status update WhatsApp notification:', whatsappError);
+      console.error('Server: Error sending status update WhatsApp notification to admin:', whatsappError);
+    }
+
+    // Send WhatsApp notification to customer only if they opted in
+    if (booking.whatsappNotifications) {
+      try {
+        if (status === 'approved') {
+          await sendMessage(
+            booking.phone1,
+            `Hello ${booking.fullName}, your booking for ${booking.eventType} has been approved! We look forward to hosting your event. Thank you for choosing us.`
+          );
+        } else if (status === 'declined') {
+          await sendMessage(
+            booking.phone1,
+            `Hello ${booking.fullName}, we regret to inform you that your booking for ${booking.eventType} could not be accommodated at this time. Please contact us for alternative arrangements.`
+          );
+        }
+      } catch (whatsappError) {
+        console.error('Server: Error sending status update WhatsApp notification to customer:', whatsappError);
+      }
     }
 
     res.status(200).json({ success: true, booking });

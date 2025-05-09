@@ -2,158 +2,200 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
 import AdminSidebar from "@/components/Sidebar/AdminSidebar";
-import { FaNewspaper, FaBuilding, FaUsers } from "react-icons/fa";
+import { FaNewspaper, FaBuilding, FaUsers, FaChartLine, FaCalendarCheck } from 'react-icons/fa';
 import { toast } from "react-toastify";
+import Link from "next/link";
+import { useSession } from 'next-auth/react';
+import { Pie } from 'react-chartjs-2';
+import {
+  Chart as ChartJS,
+  ArcElement,
+  Tooltip,
+  Legend
+} from 'chart.js';
+
+ChartJS.register(ArcElement, Tooltip, Legend);
 
 const AdminDashboard = () => {
-  const [newsCount, setNewsCount] = useState(0);
-  const [venueCount, setVenueCount] = useState(0);
-  const [userCount, setUserCount] = useState(0);
-  const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [venues, setVenues] = useState([]);
+  const [news, setNews] = useState([]);
+  const [users, setUsers] = useState([]);
+  const { data: session } = useSession();
 
   useEffect(() => {
-    const fetchCounts = async () => {
+    const fetchData = async () => {
       try {
-        const newsResponse = await axios.get("http://localhost:5000/api/news");
-        const venueResponse = await axios.get("http://localhost:5000/api/auth/registrations");
-        const usersResponse = await axios.get("http://localhost:5000/api/user/getallusers");
+        if (!session?.user?.token) {
+          toast.error('Please log in to view dashboard');
+          return;
+        }
 
-        setNewsCount(newsResponse.data.length);
-        setVenueCount(venueResponse.data.length);
-        setUserCount(usersResponse.data.length);
-        setUsers(usersResponse.data);
-        console.log(usersResponse.data);
+        // Fetch venues using the correct endpoint
+        const venuesRes = await axios.get("http://localhost:5000/api/auth/registrations", {
+          headers: { Authorization: `Bearer ${session.user.token}` }
+        });
+        setVenues(venuesRes.data);
+
+        // Fetch news using the correct endpoint
+        const newsRes = await axios.get("http://localhost:5000/api/news");
+        setNews(newsRes.data);
+
+        // Fetch users using the correct endpoint
+        const usersRes = await axios.get("http://localhost:5000/api/user/getallusers", {
+          headers: { Authorization: `Bearer ${session.user.token}` }
+        });
+        setUsers(usersRes.data);
+
       } catch (error) {
-        console.error("Failed to fetch counts", error);
+        console.error("Failed to fetch data", error);
+        toast.error("Failed to load dashboard data");
       } finally {
         setLoading(false);
       }
     };
 
-    fetchCounts();
-  }, []);
-
-  const approveUser = async (userId) => {
-    if (window.confirm("Approve this user?")) {
-      try {
-        await axios.post("http://localhost:5000/api/auth/approve-user", { userId: userId });
-        toast.success("User approved");
-        setUsers((prev) =>
-          prev.map((user) =>
-            user._id === userId ? { ...user, status: "approved" } : user
-          )
-        );
-      } catch (error) {
-        toast.error("Failed to approve user");
-        console.error(error);
-      }
+    if (session?.user?.token) {
+      fetchData();
     }
+  }, [session]);
+
+  // Calculate venue statistics
+  const approvedVenues = venues.filter(v => v.status === "approved").length;
+  const pendingVenues = venues.filter(v => v.status === "pending").length;
+  const rejectedVenues = venues.filter(v => v.status === "rejected").length;
+
+  const venueStatusData = {
+    labels: ['Approved', 'Pending', 'Rejected'],
+    datasets: [{
+      data: [approvedVenues, pendingVenues, rejectedVenues],
+      backgroundColor: ['#4CAF50', '#FFA726', '#EF5350'],
+      borderColor: ['#388E3C', '#F57C00', '#D32F2F'],
+      borderWidth: 1,
+    }]
   };
 
   return (
-    <div className="flex min-h-screen">
+    <div className="flex min-h-screen bg-gray-50">
       <AdminSidebar />
-      <div className="flex-1 p-6 bg-[#F7F7F7] overflow-y-auto">
-        <div className="mb-6">
-          <h1 className="text-3xl font-bold text-[#7a1313]">Welcome, Admin!</h1>
+      <div className="flex-1 p-8">
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold text-gray-800">Welcome to Admin Dashboard</h1>
+          <p className="text-gray-600 mt-2">Here's what's happening in your system</p>
         </div>
 
         {loading ? (
-          <p className="text-center text-lg text-gray-500">Loading...</p>
+          <div className="flex items-center justify-center h-64">
+            <div className="animate-spin rounded-full h-12 w-12 border-4 border-[#7a1313] border-t-transparent"></div>
+          </div>
         ) : (
           <>
-            {/* Summary Cards */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-10">
-              <div className="bg-white p-6 rounded-lg shadow-lg">
+            {/* Stats Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+              {/* Total Users */}
+              <div className="bg-white p-6 rounded-xl shadow-sm hover:shadow-md transition-shadow">
                 <div className="flex items-center justify-between">
                   <div>
-                    <h2 className="text-xl font-semibold text-gray-700">Total News</h2>
-                    <p className="text-3xl font-bold text-[#7a1313]">{newsCount}</p>
+                    <p className="text-sm text-gray-500 mb-1">Total Users</p>
+                    <h3 className="text-2xl font-bold text-gray-800">{users.length}</h3>
                   </div>
-                  <div className="bg-[#7a1313] text-white p-4 rounded-full">
-                    <FaNewspaper className="text-3xl" />
+                  <div className="bg-blue-100 p-3 rounded-full">
+                    <FaUsers className="w-6 h-6 text-blue-600" />
                   </div>
                 </div>
-              </div>
-              <div className="bg-white p-6 rounded-lg shadow-lg">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h2 className="text-xl font-semibold text-gray-700">Total Venues</h2>
-                    <p className="text-3xl font-bold text-[#7a1313]">{venueCount}</p>
-                  </div>
-                  <div className="bg-[#7a1313] text-white p-4 rounded-full">
-                    <FaBuilding className="text-3xl" />
-                  </div>
+                <div className="mt-4">
+                  <Link href="/admin/users" className="text-sm text-blue-600 hover:text-blue-800">
+                    View all users →
+                  </Link>
                 </div>
               </div>
-              <div className="bg-white p-6 rounded-lg shadow-lg">
+
+              {/* Total Venues */}
+              <div className="bg-white p-6 rounded-xl shadow-sm hover:shadow-md transition-shadow">
                 <div className="flex items-center justify-between">
                   <div>
-                    <h2 className="text-xl font-semibold text-gray-700">Total Users</h2>
-                    <p className="text-3xl font-bold text-[#7a1313]">{userCount}</p>
+                    <p className="text-sm text-gray-500 mb-1">Total Venues</p>
+                    <h3 className="text-2xl font-bold text-gray-800">{venues.length}</h3>
+                    <p className="text-sm text-green-600 mt-1">{approvedVenues} approved</p>
                   </div>
-                  <div className="bg-[#7a1313] text-white p-4 rounded-full">
-                    <FaUsers className="text-3xl" />
+                  <div className="bg-green-100 p-3 rounded-full">
+                    <FaBuilding className="w-6 h-6 text-green-600" />
                   </div>
+                </div>
+                <div className="mt-4">
+                  <Link href="/admin/venues" className="text-sm text-green-600 hover:text-green-800">
+                    View all venues →
+                  </Link>
+                </div>
+              </div>
+
+              {/* Total News */}
+              <div className="bg-white p-6 rounded-xl shadow-sm hover:shadow-md transition-shadow">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-gray-500 mb-1">Total News</p>
+                    <h3 className="text-2xl font-bold text-gray-800">{news.length}</h3>
+                  </div>
+                  <div className="bg-purple-100 p-3 rounded-full">
+                    <FaNewspaper className="w-6 h-6 text-purple-600" />
+                  </div>
+                </div>
+                <div className="mt-4">
+                  <Link href="/admin/news" className="text-sm text-purple-600 hover:text-purple-800">
+                    View all news →
+                  </Link>
                 </div>
               </div>
             </div>
 
-            {/* User List */}
-            <div className="bg-white p-6 rounded-lg shadow-lg mt-10">
-              <h2 className="text-xl font-bold mb-4 text-[#7a1313]">User List</h2>
-              <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-200">
-                  <thead className="bg-gray-100">
-                    <tr>
-                      <th className="px-4 py-2 text-left text-sm font-semibold text-gray-600">Name</th>
-                      <th className="px-4 py-2 text-left text-sm font-semibold text-gray-600">Email</th>
-                      <th className="px-4 py-2 text-left text-sm font-semibold text-gray-600">Username</th>
-                      <th className="px-4 py-2 text-left text-sm font-semibold text-gray-600">Role</th>
-                      <th className="px-4 py-2 text-left text-sm font-semibold text-gray-600">Status</th>
-                      <th className="px-4 py-2"></th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-200">
-                    {users.map((user) => (
-                      <tr key={user._id}>
-                        <td className="px-4 py-2 text-sm text-gray-700">
-                          {user.firstName} {user.lastName}
-                        </td>
-                        <td className="px-4 py-2 text-sm text-gray-700">{user.email}</td>
-                        <td className="px-4 py-2 text-sm text-gray-700">{user.username}</td>
-                        <td className="px-4 py-2 text-sm text-gray-700 capitalize">{user.role}</td>
-                        <td className="px-4 py-2">
-                          <span
-                            className={`text-xs font-semibold px-2 py-1 rounded-full ${
-                              user.status === "approved"
-                                ? "bg-green-100 text-green-700"
-                                : user.status === "rejected"
-                                ? "bg-red-100 text-red-700"
-                                : "bg-yellow-100 text-yellow-700"
-                            }`}
-                          >
-                            {user.status}
-                          </span>
-                        </td>
-                        <td className="px-4 py-2">
-                          {user.status === "pending" && (
-                            <button
-                              onClick={() => approveUser(user._id)}
-                              className="bg-green-600 hover:bg-green-700 text-white px-4 py-1 text-sm rounded-md"
-                            >
-                              Approve
-                            </button>
-                          )}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+            {/* Venue Status Distribution */}
+            <div className="bg-white rounded-xl shadow-sm p-6 mb-8">
+              <h2 className="text-xl font-semibold text-gray-800 mb-6">Venue Status Distribution</h2>
+              <div className="h-64 flex justify-center">
+                <div className="w-1/2">
+                  <Pie data={venueStatusData} options={{
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                      legend: {
+                        position: 'bottom'
+                      }
+                    }
+                  }} />
+                </div>
               </div>
             </div>
 
+            {/* Recent Venues */}
+            <div className="bg-white rounded-xl shadow-sm p-6">
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-xl font-semibold text-gray-800">Recent Venue Requests</h2>
+                <Link href="/admin/venues" className="text-sm text-[#7a1313] hover:text-[#5a0e0e]">
+                  View all
+                </Link>
+              </div>
+              <div className="space-y-4">
+                {venues.slice(0, 5).map((venue) => (
+                  <div key={venue._id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                    <div>
+                      <p className="font-medium text-gray-800">{venue.name}</p>
+                      <p className="text-sm text-gray-500">{venue.ownerName}</p>
+                    </div>
+                    <div className="flex items-center gap-4">
+                      <span className={`px-3 py-1 rounded-full text-sm font-medium ${
+                        venue.status === "approved"
+                          ? "bg-green-100 text-green-700"
+                          : venue.status === "pending"
+                          ? "bg-yellow-100 text-yellow-700"
+                          : "bg-red-100 text-red-700"
+                      }`}>
+                        {venue.status}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
           </>
         )}
       </div>
