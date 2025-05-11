@@ -18,7 +18,6 @@ const VenueManagement = () => {
     const fetchVenues = async () => {
       try {
         const response = await axios.get("http://localhost:5000/api/auth/getvenue");
-        console.log(response.data);
         setVenues(response.data);
       } catch (error) {
         toast.error("Failed to fetch venues");
@@ -32,7 +31,10 @@ const VenueManagement = () => {
   const handleDelete = async (id) => {
     if (window.confirm("Are you sure you want to delete this venue?")) {
       try {
-        await axios.delete(`http://localhost:5000/api/auth/registrations/${id}`);
+        await axios.post(
+          `http://localhost:5000/api/auth/delete-venue`,
+          { id }
+        );
         toast.success("Venue deleted successfully");
         setVenues((prev) => prev.filter((v) => v._id !== id));
       } catch (error) {
@@ -51,6 +53,34 @@ const VenueManagement = () => {
         );
       } catch (error) {
         toast.error("Failed to approve venue");
+      }
+    }
+  };
+
+  const banVenue = async (id) => {
+    if (window.confirm("Are you sure you want to ban this venue?")) {
+      try {
+        await axios.post(`http://localhost:5000/api/auth/ban-venue`, { id });
+        toast.success("Venue banned successfully");
+        setVenues((prev) => 
+          prev.map((v) => (v._id === id ? { ...v, status: "banned" } : v))
+        );
+      } catch (error) {
+        toast.error("Failed to ban venue");
+      }
+    }
+  };
+
+  const unbanVenue = async (id) => {
+    if (window.confirm("Are you sure you want to unban this venue?")) {
+      try {
+        await axios.post(`http://localhost:5000/api/auth/approve-venue`, { id });
+        toast.success("Venue unbanned successfully");
+        setVenues((prev) =>
+          prev.map((v) => (v._id === id ? { ...v, status: "approved" } : v))
+        );
+      } catch (error) {
+        toast.error("Failed to unban venue");
       }
     }
   };
@@ -123,6 +153,7 @@ const VenueManagement = () => {
   const approvedCount = venues.filter((v) => v.status === "approved").length;
   const pendingCount = venues.filter((v) => v.status === "pending").length;
   const rejectedCount = venues.filter((v) => v.status === "rejected").length;
+  const bannedCount = venues.filter((v) => v.status === "banned").length;
 
   return (
     <div className="flex min-h-screen">
@@ -141,7 +172,7 @@ const VenueManagement = () => {
         </div>
 
         {/* Summary */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+        <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 mb-6">
           <div className="bg-green-100 text-green-800 p-4 rounded-lg shadow text-center">
             <h2 className="text-lg font-semibold">Approved</h2>
             <p className="text-2xl">{approvedCount}</p>
@@ -153,6 +184,10 @@ const VenueManagement = () => {
           <div className="bg-red-100 text-red-800 p-4 rounded-lg shadow text-center">
             <h2 className="text-lg font-semibold">Rejected</h2>
             <p className="text-2xl">{rejectedCount}</p>
+          </div>
+          <div className="bg-red-100 text-red-800 p-4 rounded-lg shadow text-center">
+            <h2 className="text-lg font-semibold">Banned</h2>
+            <p className="text-2xl">{bannedCount}</p>
           </div>
         </div>
 
@@ -227,15 +262,22 @@ const VenueManagement = () => {
 
               {/* Buttons */}
               <div className="flex justify-end space-x-3 mt-6 pt-4 border-t">
-                <button
-                  onClick={() => {
-                    setEditingVenue(venue);
-                    setIsEditModalOpen(true);
-                  }}
-                  className="px-4 py-2 text-[#7a1313] border border-[#7a1313] rounded-lg hover:bg-[#7a1313] hover:text-white transition-all duration-200"
-                >
-                  Edit
-                </button>
+                {venue.status === "approved" && (
+                  <button
+                    onClick={() => banVenue(venue._id)}
+                    className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-all duration-200"
+                  >
+                    Ban
+                  </button>
+                )}
+                {venue.status === "banned" && (
+                  <button
+                    onClick={() => unbanVenue(venue._id)}
+                    className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-all duration-200"
+                  >
+                    Unban
+                  </button>
+                )}
                 <button
                   onClick={() => handleDelete(venue._id)}
                   className="px-4 py-2 text-red-600 border border-red-200 rounded-lg hover:bg-red-50 transition-all duration-200"
@@ -264,7 +306,7 @@ const VenueManagement = () => {
         {/* Preview Modal */}
         {isPreviewModalOpen && previewVenue && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white p-8 rounded-lg w-full max-w-lg shadow-xl space-y-6 relative">
+            <div className="bg-white p-8 rounded-lg w-[75%] h-[95%] max-w-6xl shadow-xl space-y-6 relative overflow-y-auto">
               {/* Dynamic Title */}
               <h2 className="text-xl font-semibold text-[#7a1313]">
                 {currentIndex < previewVenue.hallImages.length
@@ -280,19 +322,19 @@ const VenueManagement = () => {
                   <img
                     src={previewVenue.hallImages[currentIndex]}
                     alt={`Hall ${currentIndex + 1}`}
-                    className="w-full rounded-md shadow-lg h-64 object-cover"
+                    className="w-full rounded-md shadow-lg h-[60vh] object-cover"
                   />
                 ) : currentIndex === previewVenue.hallImages.length ? (
                   <img
                     src={previewVenue.ownerCitizenship}
                     alt="Owner Citizenship"
-                    className="w-full rounded-md shadow-lg h-64 object-cover"
+                    className="w-full rounded-md shadow-lg h-[60vh] object-cover"
                   />
                 ) : (
                   <img
                     src={previewVenue.companyRegistration}
                     alt="Company Certificate"
-                    className="w-full rounded-md shadow-lg h-64 object-cover"
+                    className="w-full rounded-md shadow-lg h-[60vh] object-cover"
                   />
                 )}
 

@@ -1,7 +1,7 @@
 "use client";
 import React, { useState, useEffect } from 'react';
 import AdminSidebar from "@/components/Sidebar/AdminSidebar";
-import { FaUser, FaSearch, FaFilter, FaEllipsisV, FaCheck, FaTimes } from 'react-icons/fa';
+import { FaUser, FaSearch, FaFilter, FaEllipsisV, FaCheck, FaTimes, FaBan, FaUnlock } from 'react-icons/fa';
 import axios from 'axios';
 import { toast } from 'react-toastify';
 
@@ -9,7 +9,7 @@ const UsersPage = () => {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [filter, setFilter] = useState('all'); // all, pending, approved, rejected
+  const [filter, setFilter] = useState('all');
   const [selectedUser, setSelectedUser] = useState(null);
 
   useEffect(() => {
@@ -50,12 +50,34 @@ const UsersPage = () => {
     }
   };
 
+  const handleBan = async (userId) => {
+    try {
+      await axios.post('http://localhost:5000/api/auth/ban-user', { userId });
+      toast.success('User banned successfully');
+      fetchUsers();
+    } catch (error) {
+      console.error('Failed to ban user:', error);
+      toast.error('Failed to ban user');
+    }
+  };
+
+  const handleUnban = async (userId) => {
+    try {
+      await axios.post('http://localhost:5000/api/auth/approve-user', { userId });
+      toast.success('User unbanned successfully');
+      fetchUsers();
+    } catch (error) {
+      console.error('Failed to unban user:', error);
+      toast.error('Failed to unban user');
+    }
+  };
+
   const filteredUsers = users.filter(user => {
     const matchesSearch = 
       user.firstName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       user.lastName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       user.email?.toLowerCase().includes(searchTerm.toLowerCase());
-    
+
     const matchesFilter = 
       filter === 'all' || 
       user.status === filter;
@@ -95,6 +117,7 @@ const UsersPage = () => {
                 <option value="pending">Pending</option>
                 <option value="approved">Approved</option>
                 <option value="rejected">Rejected</option>
+                <option value="banned">Banned</option>
               </select>
             </div>
           </div>
@@ -144,6 +167,7 @@ const UsersPage = () => {
                         <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
                           user.status === 'approved' ? 'bg-green-100 text-green-800' :
                           user.status === 'rejected' ? 'bg-red-100 text-red-800' :
+                          user.status === 'banned' ? 'bg-gray-300 text-gray-800' :
                           'bg-yellow-100 text-yellow-800'
                         }`}>
                           {user.status}
@@ -159,20 +183,40 @@ const UsersPage = () => {
                               <button
                                 onClick={() => handleApprove(user._id)}
                                 className="text-green-600 hover:text-green-900"
+                                title="Approve"
                               >
                                 <FaCheck className="h-5 w-5" />
                               </button>
                               <button
                                 onClick={() => handleReject(user._id)}
                                 className="text-red-600 hover:text-red-900"
+                                title="Reject"
                               >
                                 <FaTimes className="h-5 w-5" />
                               </button>
                             </>
                           )}
+                          {user.status !== 'banned' ? (
+                            <button
+                              onClick={() => handleBan(user._id)}
+                              className="text-yellow-600 hover:text-yellow-800"
+                              title="Ban User"
+                            >
+                              <FaBan className="h-5 w-5" />
+                            </button>
+                          ) : (
+                            <button
+                              onClick={() => handleUnban(user._id)}
+                              className="text-blue-600 hover:text-blue-800"
+                              title="Unban User"
+                            >
+                              <FaUnlock className="h-5 w-5" />
+                            </button>
+                          )}
                           <button
                             onClick={() => setSelectedUser(user)}
                             className="text-gray-600 hover:text-gray-900"
+                            title="More Options"
                           >
                             <FaEllipsisV className="h-5 w-5" />
                           </button>
@@ -190,4 +234,4 @@ const UsersPage = () => {
   );
 };
 
-export default UsersPage; 
+export default UsersPage;

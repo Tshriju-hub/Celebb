@@ -189,5 +189,42 @@ const approveVenue = async (req, res) => {
   }
 };
 
+const deleteVenue = async (req, res) => {
+  try {
+    const { id } = req.params; // Get the ID from the request parameters
+    const venue = await Registration.findById(id); // Fetch the venue from the database
 
-module.exports = { registerOwner, getVenues ,getVenueDetails, getVenuesforOwner, approveVenue,getVenueAdmin };
+    if (!venue) {
+      return res.status(404).json({ success: false, message: 'Venue not found' });
+    }
+
+    await Registration.deleteOne({ _id: id }); // Delete the venue from the database
+
+    res.status(200).json({ success: true, message: 'Venue deleted successfully' });
+  } catch (error) {
+    console.error('Error deleting venue:', error.message);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+}
+
+const banVenue = async (req, res) => {
+  try {
+    const { id } = req.body; // Get the ID from the request parameters
+    const venue = await Registration.findById(id); // Fetch the venue from the database
+
+    if (!venue) {
+      return res.status(404).json({ success: false, message: 'Venue not found' });
+    }
+
+    venue.status = 'banned'; // Update the status to banned
+    await venue.save(); // Save the changes to the database
+
+    res.status(200).json({ success: true, message: 'Venue banned successfully' });
+  } catch (error) {
+    console.error('Error banning venue:', error.message);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+};
+
+
+module.exports = { registerOwner, getVenues ,getVenueDetails, getVenuesforOwner, approveVenue,getVenueAdmin, deleteVenue, banVenue };

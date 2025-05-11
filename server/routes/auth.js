@@ -31,5 +31,7 @@ router.get('/getvenue',ownerController.getVenueAdmin); // New route for fetching
 router.get('/registrations', ownerController.getVenues); // New route for fetching all registrations
 router.post('/registrations/owner', ownerController.getVenuesforOwner); // New route for fetching registrations by owner ID
 router.post('/approve-venue', ownerController.approveVenue); // New route for approving a venue
+router.post('/delete-venue', ownerController.deleteVenue); // New route for deleting a venue
+router.post('/ban-venue', ownerController.banVenue); // New route for banning a venue
 
 module.exports = router;
