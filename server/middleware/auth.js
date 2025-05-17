@@ -2,15 +2,18 @@ const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 
 const protect = async (req, res, next) => {
+  console.log('Auth middleware triggered from socket');
   try {
     const token = req.header('Authorization')?.replace('Bearer ', '');
-    
+    console.log('Token:', token);
     if (!token) {
       return res.status(401).json({ message: 'No authentication token, access denied' });
     }
 
     try {
+      console.log('Verifying token...');
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
+      console.log('Decoded token:', decoded);
       const user = await User.findById(decoded.userId || decoded.id).select('-password');
       
       if (!user) {

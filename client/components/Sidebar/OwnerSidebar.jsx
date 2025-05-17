@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import Image from "next/image";
-import { FaUser, FaCalendarAlt, FaNewspaper, FaHome } from 'react-icons/fa';
+import { FaUser, FaCalendarAlt, FaNewspaper, FaHome,FaFacebookMessenger } from 'react-icons/fa';
 import { MdDashboard } from 'react-icons/md';
 import { BsBuilding } from 'react-icons/bs';
 
@@ -15,6 +15,11 @@ export default function OwnerSidebar() {
       name: "Dashboard", 
       href: "/owner/dashboard",
       icon: <MdDashboard className="w-5 h-5" />
+    },
+    {
+      name: "Messages",
+      href: "/owner/messages",
+      icon: <FaFacebookMessenger className="w-5 h-5" />
     },
     { 
       name: "Bookings", 

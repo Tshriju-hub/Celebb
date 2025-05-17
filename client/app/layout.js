@@ -1,6 +1,7 @@
 import { Inter } from "next/font/google";
 import "./globals.css";
-import { AuthProvider } from "./Providers";
+import { AuthProvider } from "./Providers"; // must be a client component
+import { SocketContextProvider } from "../context/SocketContext";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -13,7 +14,11 @@ export default function RootLayout({ children }) {
   return (
     <html lang="en">
       <body className={inter.className}>
-        <AuthProvider> {children}</AuthProvider>
+        <AuthProvider>
+          <SocketContextProvider>
+            {children}
+          </SocketContextProvider>
+        </AuthProvider>
       </body>
     </html>
   );

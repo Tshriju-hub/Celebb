@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import Image from "next/image";
-import { FaUser, FaGift, FaCog, FaHome } from 'react-icons/fa';
+import { FaUser, FaGift, FaCog, FaHome,FaFacebookMessenger  } from 'react-icons/fa';
 import { MdDashboard } from 'react-icons/md';
 
 export default function Sidebar() {
@@ -14,6 +14,11 @@ export default function Sidebar() {
       name: "Dashboard", 
       href: "/user/dashboard",
       icon: <MdDashboard className="w-5 h-5" />
+    },
+    {
+      name: "Messages",
+      href: "/user/messages",
+      icon: <FaFacebookMessenger  className="w-5 h-5" />
     },
     { 
       name: "Loyalty", 
