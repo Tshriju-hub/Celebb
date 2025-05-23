@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import Image from "next/image";
-import { FaUser, FaCalendarAlt, FaNewspaper, FaHome,FaFacebookMessenger } from 'react-icons/fa';
+import { FaUser, FaCalendarAlt, FaNewspaper, FaHome,FaFacebookMessenger, FaImages } from 'react-icons/fa';
 import { MdDashboard } from 'react-icons/md';
 import { BsBuilding } from 'react-icons/bs';
 
@@ -30,6 +30,11 @@ export default function OwnerSidebar() {
       name: "News", 
       href: "/owner/news",
       icon: <FaNewspaper className="w-5 h-5" />
+    },
+    { 
+      name: "Services", 
+      href: "/owner/services",
+      icon: <FaImages className="w-5 h-5" />
     }
   ];
 

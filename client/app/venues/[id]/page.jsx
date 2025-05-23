@@ -25,6 +25,8 @@ import {
   FaUtensils,
   FaPalette,
   FaMusic,
+  FaThumbsUp,
+  FaThumbsDown,
 } from "react-icons/fa";
 import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
@@ -194,17 +196,52 @@ export default function VenueDetailPage() {
 
   const handleLike = async (reviewId) => {
     if (!user) return setShowLoginModal(true);
-    await axios.post(
-      `http://localhost:5000/api/reviews/${id}/like`,
-      { userId: user._id, reviewId },
-      {
-        headers: {
-          Authorization: `Bearer ${session.accessToken}`,
-        },
+    try {
+      await axios.post(
+        `http://localhost:5000/api/reviews/${id}/like`,
+        { userId: user._id, reviewId },
+        {
+          headers: {
+            Authorization: `Bearer ${session?.user?.token}`,
+          },
+        }
+      );
+      const updated = await axios.get(`http://localhost:5000/api/reviews/${id}`);
+      setReviews(updated.data);
+    } catch (error) {
+      console.error("Error liking review:", error);
+      if (error.response?.status === 401) {
+        toast.error("Please log in to like reviews", { position: "top-center" });
+        setShowLoginModal(true);
+      } else {
+        toast.error("Failed to like review", { position: "top-center" });
       }
-    );
-    const updated = await axios.get(`http://localhost:5000/api/reviews/${id}`);
-    setReviews(updated.data);
+    }
+  };
+
+  const handleDislike = async (reviewId) => {
+    if (!user) return setShowLoginModal(true);
+    try {
+      await axios.post(
+        `http://localhost:5000/api/reviews/${id}/dislike`,
+        { userId: user._id, reviewId },
+        {
+          headers: {
+            Authorization: `Bearer ${session?.user?.token}`,
+          },
+        }
+      );
+      const updated = await axios.get(`http://localhost:5000/api/reviews/${id}`);
+      setReviews(updated.data);
+    } catch (error) {
+      console.error("Error disliking review:", error);
+      if (error.response?.status === 401) {
+        toast.error("Please log in to dislike reviews", { position: "top-center" });
+        setShowLoginModal(true);
+      } else {
+        toast.error("Failed to dislike review", { position: "top-center" });
+      }
+    }
   };
 
   const handleReply = async (reviewId) => {
@@ -530,12 +567,28 @@ export default function VenueDetailPage() {
                         </div>
                       </div>
                       <div className="flex items-center space-x-2">
-                    <button
-                      onClick={() => handleLike(rev._id)}
-                          className="text-red-500 hover:text-red-600 transition"
-                    >
-                      <FaHeart />
-                    </button>
+                        <button
+                          onClick={() => handleLike(rev._id)}
+                          className={`flex items-center space-x-1 px-2 py-1 rounded ${
+                            rev.likes?.includes(user?._id)
+                              ? 'text-blue-600 bg-blue-50'
+                              : 'text-gray-500 hover:text-blue-600 hover:bg-blue-50'
+                          } transition-colors`}
+                        >
+                          <FaThumbsUp />
+                          <span>{rev.likes?.length || 0}</span>
+                        </button>
+                        <button
+                          onClick={() => handleDislike(rev._id)}
+                          className={`flex items-center space-x-1 px-2 py-1 rounded ${
+                            rev.dislikes?.includes(user?._id)
+                              ? 'text-red-600 bg-red-50'
+                              : 'text-gray-500 hover:text-red-600 hover:bg-red-50'
+                          } transition-colors`}
+                        >
+                          <FaThumbsDown />
+                          <span>{rev.dislikes?.length || 0}</span>
+                        </button>
                       </div>
                     </div>
                     <p className="text-gray-700 mb-4">{rev.comment}</p>

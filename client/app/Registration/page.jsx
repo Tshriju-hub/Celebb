@@ -111,7 +111,7 @@ export default function PartyPalaceRegistration() {
       if (stepNumber === maxCompletedStep + 1) {
         if (!isStepComplete(step)) {
           toast.error("Please complete the current step before proceeding.");
-          return;
+        return;
         }
       }
       setStep(stepNumber);
@@ -285,29 +285,29 @@ export default function PartyPalaceRegistration() {
 
         <div className="flex justify-between mt-8">
           {step > 1 && (
-            <button
-              onClick={prevStep}
+              <button
+                onClick={prevStep}
               className="bg-gray-500 text-white px-6 py-2 rounded-lg hover:bg-gray-600 transition-colors"
-            >
-              Back
-            </button>
+              >
+                Back
+              </button>
           )}
           {step < 6 ? (
-            <button
-              onClick={nextStep}
+              <button
+                onClick={nextStep}
               className="bg-[#6D0C0E] text-white px-6 py-2 rounded-lg hover:bg-[#8D0C0E] transition-colors ml-auto"
-            >
-              Next
-            </button>
+              >
+                Next
+              </button>
           ) : (
-            <button
+              <button
               onClick={handleSubmit}
               className="bg-green-600 text-white px-6 py-2 rounded-lg hover:bg-green-700 transition-colors ml-auto"
             >
               Submit
-            </button>
+              </button>
           )}
-        </div>
+          </div>
       </div>
     </div>
   );
