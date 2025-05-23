@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { signIn, useSession } from 'next-auth/react';
 import {
-  FaEnvelope, FaLock, FaGoogle, FaArrowLeft, FaUser, FaIdBadge
+  FaEnvelope, FaLock, FaGoogle, FaArrowLeft, FaUser, FaIdBadge, FaCheckCircle
 } from 'react-icons/fa';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -23,23 +23,32 @@ export default function RegisterOwnerPage() {
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [termsAccepted, setTermsAccepted] = useState(false);
+  const [showTermsError, setShowTermsError] = useState(false);
 
-  /* Redirect if already authenticated
   useEffect(() => {
-    if(session.user.role === 'owner'){
-      window.location.href = '/'; // or router.push('/')
+    if (session?.user?.role === 'owner') {
+      window.location.href = '/';
     }
-  }, [status]);*/
+  }, [session]);
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
     setError('');
+    setShowTermsError(false);
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
     setError('');
+
+    if (!termsAccepted) {
+      setShowTermsError(true);
+      setError('Please accept the terms and conditions to register');
+      setLoading(false);
+      return;
+    }
 
     const { firstName, lastName, username, email, password, confirmPassword } = formData;
 
@@ -50,6 +59,7 @@ export default function RegisterOwnerPage() {
     }
 
     try {
+      // Register the owner account
       const response = await axios.post('http://localhost:5000/api/auth/register', {
         firstName,
         lastName,
@@ -57,29 +67,59 @@ export default function RegisterOwnerPage() {
         email,
         password,
         role: 'owner',
+        termsAccepted: true,
+        termsAcceptedAt: new Date().toISOString(),
+        isActive: true // Set owner account as active immediately
       });
 
       if (response.data.success) {
-        localStorage.setItem('token', response.data.token); // Store token in local storage
-        const result = await signIn('credentials', {
-          redirect: false,
-          email,
-          password,
-        });
+        // Login immediately after registration
+        try {
+          const loginResponse = await axios.post('http://localhost:5000/api/auth/login', {
+            email,
+            password
+          });
 
-        if (result.ok) {
-          window.location.href = '/';
-        } else {
-          setError( result.error ||'Login failed after registration');
+          if (loginResponse.data.success) {
+            // Store the token
+            localStorage.setItem('token', loginResponse.data.token);
+            
+            // Sign in using NextAuth
+            const result = await signIn('credentials', {
+              redirect: false,
+              email,
+              password,
+              callbackUrl: '/'
+            });
+
+            if (result?.ok) {
+              // Redirect to home page
+              window.location.href = '/';
+            } else {
+              setError('Registration successful but login failed. Please try logging in manually.');
+            }
+          } else {
+            setError('Registration successful but login failed. Please try logging in manually.');
+          }
+        } catch (loginError) {
+          console.error('Login error:', loginError);
+          setError('Registration successful but login failed. Please try logging in manually.');
         }
       } else {
         setError(response.data.message || 'Registration failed');
       }
     } catch (err) {
+      console.error('Registration error:', err);
       setError(err.response?.data?.message || 'An error occurred during registration');
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleTermsChange = (e) => {
+    setTermsAccepted(e.target.checked);
+    setShowTermsError(false);
+    setError('');
   };
 
   const handleGoogleLogin = async () => {
@@ -185,12 +225,33 @@ export default function RegisterOwnerPage() {
               />
             </div>
 
+            <div className="flex items-center space-x-2">
+              <input
+                type="checkbox"
+                id="terms"
+                checked={termsAccepted}
+                onChange={handleTermsChange}
+                className="w-4 h-4 text-[#7a1313] border-gray-300 rounded focus:ring-[#7a1313]"
+              />
+              <label htmlFor="terms" className="text-sm text-gray-600">
+                I agree to the{' '}
+                <Link href="/terms" className="text-[#7a1313] hover:underline">
+                  Terms and Conditions
+                </Link>
+              </label>
+            </div>
+
             <button
               type="submit"
-              className="w-full bg-[#7a1313] hover:bg-[#5a0e0e] text-white py-2.5 px-4 rounded-lg text-base font-bold transition-all duration-300 transform hover:scale-105"
+              className="w-full bg-[#7a1313] hover:bg-[#5a0e0e] text-white py-2.5 px-4 rounded-lg text-base font-bold transition-all duration-300 transform hover:scale-105 flex items-center justify-center gap-2"
               disabled={loading}
             >
-              {loading ? 'Registering...' : 'Register'}
+              {loading ? 'Registering...' : (
+                <>
+                  <FaCheckCircle />
+                  Register
+                </>
+              )}
             </button>
           </form>
 
@@ -199,10 +260,6 @@ export default function RegisterOwnerPage() {
               By continuing, you agree to our{' '}
               <Link href="/privacy-policy" className="text-[#7a1313] hover:underline">
                 Privacy Policy
-              </Link>{' '}
-              and{' '}
-              <Link href="/terms" className="text-[#7a1313] hover:underline">
-                Terms of Service
               </Link>
             </p>
           </div>

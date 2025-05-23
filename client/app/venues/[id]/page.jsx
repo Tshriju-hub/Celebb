@@ -9,6 +9,7 @@ import { useEffect, useState } from "react";
 import axios from "axios";
 import { useSession } from "next-auth/react";
 import { motion } from "framer-motion";
+import { Headphones, User } from 'lucide-react';
 import {
   FaWhatsapp,
   FaStar,
@@ -28,6 +29,26 @@ import {
 import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import VenueMap from "@/components/googleMap/venueMap";
+
+const MessageIcon = ({ venueId }) => {
+  const router = useRouter();
+  return (
+    <button
+      onClick={() => router.push(`/venues/${venueId}/chat`)}
+      className="ml-4 p-4 rounded-full bg-white/20 backdrop-blur-sm shadow-md hover:bg-white/40 hover:scale-110 transition shadow-lg duration-200"
+      title="Message this Venue"
+    >
+      <Image
+        src="/customersupport.svg"
+        alt="Customer Support"
+        width={24}
+        height={24}
+        className="invert brightness-0" // This helps to make dark SVG white; tweak if needed
+        priority
+      />
+    </button>
+  );
+};
 
 export default function VenueDetailPage() {
   const { id } = useParams();
@@ -270,7 +291,10 @@ export default function VenueDetailPage() {
             
             {/* Venue Name and Address - Positioned higher */}
             <div className="absolute top-1/4 left-0 right-0 p-8 text-white">
-              <h1 className="text-4xl font-bold mb-2">{venue.name}</h1>
+              <div className="flex items-center gap-3">
+                <h1 className="text-4xl font-bold mb-2">{venue.name}</h1>
+                <MessageIcon venueId={venue._id} />
+              </div>
               <p className="text-lg">{venue.address}</p>
             </div>
 

@@ -81,11 +81,18 @@ const register = async (req, res) => {
     // Hash password before saving
     const hashedPassword = await bcrypt.hash(password.trim(), SALT_ROUNDS);
     console.log('Hashed password:', hashedPassword); // Log the hashed password for debugging
-    let status = 'pending'; // Default status for all users
-    console.log('User role:', role); // Log the user role for debugging
-    if(role == null){
+    
+    // Set status based on role
+    let status = 'pending'; // Default status
+    if (role === 'owner') {
+      status = 'approved'; // Set status to approved for owners
+    } else if (role === null) {
       status = 'approved'; // Set status to approved for regular users
     }
+    
+    console.log('User role:', role); // Log the user role for debugging
+    console.log('User status:', status); // Log the user status for debugging
+
     // Create new user
     const user = new User({
       firstName,

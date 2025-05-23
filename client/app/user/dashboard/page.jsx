@@ -19,6 +19,15 @@ export default function UserDashboardProfile() {
   }, [status, router]);
 
   useEffect(() => {
+    if (status === 'authenticated') {
+      const token = session?.user?.token;
+      if (token) {
+        localStorage.setItem('token', token);
+      }
+    }
+  }, [status, session]);
+
+  useEffect(() => {
     const fetchUserDetails = async () => {
       if (status === "authenticated" && session?.user?.token) {
         try {

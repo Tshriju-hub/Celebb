@@ -77,6 +77,24 @@ export default function ViewVenues() {
     router.push(`/venues/${id}`);
   };
 
+  const MessageIcon = ({ onClick }) => (
+    <button
+      onClick={onClick}
+      className="p-2 rounded-full bg-gradient-to-br from-[#7a1313] to-[#a33a3a] hover:scale-110 transition shadow-lg"
+      title="Message this Venue"
+    >
+      <svg width="28" height="28" fill="none" viewBox="0 0 24 24">
+        <path
+          d="M2 21l21-9-21-9v7l15 2-15 2v7z"
+          fill="#fff"
+          stroke="#fff"
+          strokeWidth="1.5"
+          strokeLinejoin="round"
+        />
+      </svg>
+    </button>
+  );
+
   return (
     <MainLayout>
       <div className="min-h-screen bg-[#E9E0DC] px-4 sm:px-8 md:px-12 py-20 flex flex-col items-center">

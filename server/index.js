@@ -22,9 +22,10 @@ connectDB();
 
 // Apply middleware
 app.use(cors({
-  origin: process.env.Frontend_URL,
-  methods: ['GET', 'POST'],
+  origin: ['http://localhost:3000', process.env.Frontend_URL].filter(Boolean),
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   credentials: true,
+  allowedHeaders: ['Content-Type', 'Authorization']
 }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));

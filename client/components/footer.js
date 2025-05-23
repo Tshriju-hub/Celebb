@@ -100,7 +100,7 @@ const Footer = () => {
                 </li>
                 <li>
                   <a
-                    href="/venue"
+                    href="/venues"
                     className="hover:text-gray-300 hover:underline text-base"
                   >
                     Venue

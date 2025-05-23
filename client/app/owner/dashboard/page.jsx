@@ -16,6 +16,15 @@ export default function OwnerDashboard() {
 
   const { data: session, status } = useSession();
 
+  useEffect(() => {
+    if (status === 'authenticated') {
+      const token = session?.user?.token;
+      if (token) {
+        localStorage.setItem('token', token);
+      }
+    }
+  }, [status, session]);
+
   const fetchData = async () => {
     try {
       if (!session?.user?.token) {

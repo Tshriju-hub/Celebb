@@ -3,6 +3,7 @@ const Message = require("../models/Message");
 const Conversation = require("../models/Conversation");
 const User = require("../models/User");
 const { timeAgoMessage } = require("../lib/timeago.js");
+const Registration = require("../models/Registration");
 
 const getUsersForSidebar = async (req, res) => {
   try {
@@ -27,29 +28,123 @@ const getUsersForSidebar = async (req, res) => {
 const getOwnerConversations = async (req, res) => {
     try {
         const userId = req.user._id;
+        console.log("[getOwnerConversations] Starting with Owner ID:", userId);
+
+        if (!userId) {
+            console.error("[getOwnerConversations] No user ID provided");
+            return res.status(400).json({ error: "User ID is required" });
+        }
+
+        // First verify the user exists
+        const userExists = await User.findById(userId);
+        if (!userExists) {
+            console.error("[getOwnerConversations] User not found:", userId);
+            return res.status(404).json({ error: "User not found" });
+        }
+
+        console.log("[getOwnerConversations] User verified, finding conversations...");
 
         // Find conversations where the user is a participant
         const conversations = await Conversation.find({
             participants: userId,
-        });
+        }).lean(); // Use lean() for better performance
 
-        // Extract all other participants
-        const otherUserIds = new Set();
+        console.log("[getOwnerConversations] Raw conversations found:", conversations);
 
+        if (!conversations || conversations.length === 0) {
+            console.log("[getOwnerConversations] No conversations found for user");
+            return res.status(200).json([]);
+        }
+
+        // Extract participant IDs
+        const participantIds = new Set();
         conversations.forEach(convo => {
-            convo.participants.forEach(participantId => {
-                if (participantId.toString() !== userId.toString()) {
-                    otherUserIds.add(participantId.toString());
-                }
-            });
+            if (convo.participants) {
+                convo.participants.forEach(pid => {
+                    if (pid.toString() !== userId.toString()) {
+                        participantIds.add(pid.toString());
+                    }
+                });
+            }
         });
 
-        // Optionally, fetch user details from the User model
-        const users = await User.find({ _id: { $in: Array.from(otherUserIds) } }).select('-password');
-        res.json(users);
+        console.log("[getOwnerConversations] Participant IDs:", Array.from(participantIds));
+
+        if (participantIds.size === 0) {
+            console.log("[getOwnerConversations] No other participants found");
+            return res.status(200).json([]);
+        }
+
+        // Fetch users and their registrations
+        const users = await User.find({ 
+            _id: { $in: Array.from(participantIds) } 
+        }).select('-password').lean();
+
+        console.log("[getOwnerConversations] Users found:", users.map(u => u._id));
+
+        if (!users || users.length === 0) {
+            console.log("[getOwnerConversations] No users found");
+            return res.status(200).json([]);
+        }
+
+        // Get registrations for all users at once
+        const registrations = await Registration.find({
+            owner: { $in: users.map(u => u._id) }
+        }).lean();
+
+        console.log("[getOwnerConversations] Registrations found:", registrations.map(r => r.owner));
+
+        // Get last messages for all conversations
+        const lastMessages = await Message.find({
+            _id: { 
+                $in: conversations.flatMap(c => c.messages || [])
+            }
+        })
+        .sort({ createdAt: -1 })
+        .lean();
+
+        console.log("[getOwnerConversations] Last messages found:", lastMessages.length);
+
+        // Combine all data
+        const usersWithData = users.map(user => {
+            const registration = registrations.find(r => r.owner.toString() === user._id.toString());
+            const conversation = conversations.find(c => 
+                c.participants.some(p => p.toString() === user._id.toString())
+            );
+            const lastMessage = lastMessages.find(m => 
+                conversation?.messages?.includes(m._id)
+            );
+
+            return {
+                ...user,
+                registration: registration || null,
+                conversationId: conversation?._id || null,
+                lastMessage: lastMessage?.message || "",
+                timeAgo: lastMessage ? timeAgoMessage(lastMessage.createdAt) : ""
+            };
+        });
+
+        console.log("[getOwnerConversations] Final processed data:", 
+            usersWithData.map(u => ({
+                id: u._id,
+                username: u.username,
+                hasRegistration: !!u.registration,
+                hasLastMessage: !!u.lastMessage
+            }))
+        );
+
+        res.status(200).json(usersWithData);
     } catch (error) {
-        console.error('Error in getOwnerConversations:', error.message);
-        res.status(500).json({ error: 'Internal server error' });   
+        console.error('[getOwnerConversations] Detailed error:', {
+            message: error.message,
+            stack: error.stack,
+            name: error.name
+        });
+        res.status(500).json({ 
+            error: 'Internal server error', 
+            details: error.message,
+            type: error.name
+        });   
     }
 };
 
@@ -109,6 +204,7 @@ const sendMessage = async (req, res) => {
     const { message } = req.body;
     const { id: receiverId } = req.params;
     const senderId = req.user._id;
+    console.log("[sendMessage] Sender:", senderId, "Receiver:", receiverId);
 
     let conversation = await Conversation.findOne({
       participants: { $all: [senderId, receiverId] },
@@ -118,6 +214,9 @@ const sendMessage = async (req, res) => {
       conversation = await Conversation.create({
         participants: [senderId, receiverId],
       });
+      console.log("[sendMessage] Created new conversation:", conversation._id);
+    } else {
+      console.log("[sendMessage] Found existing conversation:", conversation._id);
     }
 
     const newMessage = new Message({

@@ -8,20 +8,22 @@ const dotenv = require("dotenv");
 dotenv.config();
 
 const app = express();
-app.use(cors({
-  origin: 'http://localhost:3000',
-  methods: ['GET', 'POST'],
+const server = http.createServer(app);
+
+// Configure CORS for both Express and Socket.IO
+const corsOptions = {
+  origin: ['http://localhost:3000', process.env.Frontend_URL].filter(Boolean),
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   credentials: true,
-}));
+  allowedHeaders: ['Content-Type', 'Authorization']
+};
+
+app.use(cors(corsOptions));
 // app.use(cookieParser());
 
-const server = http.createServer(app);
 const io = new Server(server, {
-  cors: {
-    origin: 'http://localhost:3000',
-    methods: ['GET', 'POST'],
-    credentials: true,
-  },
+  cors: corsOptions,
+  transports: ['websocket', 'polling']
 });
 
 const userSocketMap = {};

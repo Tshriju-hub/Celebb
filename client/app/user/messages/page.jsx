@@ -11,6 +11,9 @@ import useConversation from "@/hooks/useConversation";
 import useGetConversations from "@/hooks/useGetConversations";
 import useGetMessages from "@/hooks/useGetMessages";
 import useSendMessage from "@/hooks/useSendMessage";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import MainSidebar from "@/components/Sidebar/Sidebar";
 
 const Messages = ({ openProfile, openVideoCall }) => {
   const { selectedConversation, setSelectedConversation, isTyping } = useConversation();
@@ -74,90 +77,95 @@ const Messages = ({ openProfile, openVideoCall }) => {
   }
 
   return (
-    <div className="w-full h-[87vh] mt-[13vh] flex px-2 gap-2">
-      <Sidebar
-        conversations={filteredConversations}
-        selectedConversation={selectedConversation}
-        onUserClick={setSelectedConversation}
-        searchQuery={searchQuery}
-        onSearchChange={(e) => setSearchQuery(e.target.value)}
-      />
-      <ChatBox
-        selectedConversation={selectedConversation}
-        messages={messages}
-        message={message}
-        setMessage={setMessage}
-        handleSend={handleSend}
-        handleKeyDown={handleKeyDown}
-        authUser={authUser}
-        formatTimestamp={formatTimestamp}
-        isModalOpen={isModalOpen}
-        setModalOpen={setModalOpen}
-        openVideoCall={openVideoCall}
-        open={openProfile}
-        isTyping={isTyping}
-      />
+    <div className="flex bg-gray-100 min-h-screen">
+      <MainSidebar />
+      <div className="w-full h-[87vh] mt-[13vh] flex px-2 gap-2">
+        <ChatSidebar
+          conversations={filteredConversations}
+          selectedConversation={selectedConversation}
+          onUserClick={setSelectedConversation}
+          searchQuery={searchQuery}
+          onSearchChange={(e) => setSearchQuery(e.target.value)}
+        />
+        <ChatBox
+          selectedConversation={selectedConversation}
+          messages={messages}
+          message={message}
+          setMessage={setMessage}
+          handleSend={handleSend}
+          handleKeyDown={handleKeyDown}
+          authUser={authUser}
+          formatTimestamp={formatTimestamp}
+          isModalOpen={isModalOpen}
+          setModalOpen={setModalOpen}
+          openVideoCall={openVideoCall}
+          open={openProfile}
+          isTyping={isTyping}
+        />
+      </div>
     </div>
   );
 };
 
-const Sidebar = ({
+const ChatSidebar = ({
   conversations,
   selectedConversation,
   onUserClick,
   searchQuery,
   onSearchChange,
 }) => (
-  <div className="bg-blue-100 rounded-2xl p-4 w-[23%] flex flex-col">
-    <div className="text-2xl font-bold mb-4">Chats</div>
-    <input
-      type="text"
-      placeholder="Search for users"
-      value={searchQuery}
-      onChange={onSearchChange}
-      className="mb-4 p-2 rounded-full border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-300"
-    />
-    <div className="flex flex-col gap-3 overflow-y-auto">
+  <div className="bg-white border border-gray-100 rounded-3xl shadow-lg w-72 min-w-[260px] flex flex-col p-0 backdrop-blur-sm">
+    <div className="text-2xl font-bold text-gray-800 px-8 pt-8 pb-3 tracking-tight">Chats</div>
+    <div className="px-8 pb-4">
+      <Input
+        type="text"
+        placeholder="Search for users"
+        value={searchQuery}
+        onChange={onSearchChange}
+        className="mb-2 bg-white/70 border border-gray-200 focus:ring-[#eecaca] focus:border-[#eecaca]"
+      />
+    </div>
+    <div className="flex flex-col gap-1 overflow-y-auto px-2 pb-4 custom-scrollbar">
       {!conversations || conversations.length === 0 ? (
-        <div className="text-center py-10 text-gray-500">No conversations found</div>
+        <div className="text-center py-10 text-gray-300">No conversations found</div>
       ) : (
         conversations
           .filter(Boolean)
-          .map((user) => (
-            <div
-              key={user._id}
-              onClick={() => onUserClick(user)}
-              className={`flex items-center p-3 rounded-xl cursor-pointer hover:bg-blue-200 ${
-                selectedConversation?._id === user._id ? "bg-blue-400 text-white" : ""
-              }`}
-            >
+          .map((user) => {
+            const venueImage = user.registration && user.registration.hallImages && user.registration.hallImages.length > 0 && user.registration.hallImages[0]
+              ? user.registration.hallImages[0]
+              : `https://ui-avatars.com/api/?name=${encodeURIComponent(user.username)}&background=0D8ABC&color=fff`;
+            return (
               <div
-                className="w-12 h-12 rounded-full bg-center bg-cover mr-3"
-                style={{
-                    backgroundImage: `url(${
-                    user.profileImage && user.profileImage.trim() !== ""
-                        ? user.profileImage
-                        : `https://ui-avatars.com/api/?name=${encodeURIComponent(user.username)}&background=0D8ABC&color=fff`
-                    })`,
-                }}
+                key={user._id}
+                onClick={() => onUserClick(user)}
+                className={`flex items-center p-3 rounded-2xl cursor-pointer transition-all duration-150 gap-3 group ${
+                  selectedConversation?._id === user._id
+                    ? "bg-gray-100 text-[#7a1313] shadow-md"
+                    : "hover:bg-gray-50 text-gray-700"
+                }`}
+              >
+                <div
+                  className="w-12 h-12 rounded-full bg-center bg-cover border-2 border-white shadow group-hover:shadow-md transition"
+                  style={{ backgroundImage: `url(${venueImage})` }}
                 />
-              <div className="flex-1">
-                <div className="font-semibold">{user.username}</div>
-                <div className="text-sm text-gray-600">
-                  {user.lastMessage ? user.lastMessage : "No messages"}
+                <div className="flex-1 min-w-0">
+                  <div className="font-semibold truncate text-base text-gray-800">{user.username}</div>
+                  <div className="text-xs text-gray-400 truncate">
+                    {user.lastMessage ? user.lastMessage : "No messages"}
+                  </div>
+                  {user.timeAgo && (
+                    <div className="text-xs text-gray-300">{user.timeAgo}</div>
+                  )}
                 </div>
-                {user.timeAgo && (
-                  <div className="text-xs text-gray-400">{user.timeAgo}</div>
-                )}
+                <SlOptionsVertical className={`text-lg ${selectedConversation?._id === user._id ? "text-[#7a1313]" : "text-gray-300 group-hover:text-[#7a1313]"}`} />
               </div>
-              <SlOptionsVertical />
-            </div>
-          ))
+            );
+          })
       )}
     </div>
   </div>
 );
-
 
 const ChatBox = ({
   selectedConversation,
@@ -185,40 +193,42 @@ const ChatBox = ({
 
   if (!selectedConversation) {
     return (
-      <div className="flex-1 flex items-center justify-center bg-blue-100 rounded-2xl">
-        <h3 className="text-gray-500 text-lg">Select a user to chat</h3>
+      <div className="flex-1 flex items-center justify-center bg-white rounded-3xl shadow-lg">
+        <h3 className="text-gray-300 text-lg font-medium">Select a user to chat</h3>
       </div>
     );
   }
 
   const groupedMessages = groupMessages(messages);
+  const selectedVenueImage = selectedConversation.registration && selectedConversation.registration.hallImages && selectedConversation.registration.hallImages.length > 0 && selectedConversation.registration.hallImages[0]
+    ? selectedConversation.registration.hallImages[0]
+    : `https://ui-avatars.com/api/?name=${encodeURIComponent(selectedConversation.username)}&background=0D8ABC&color=fff`;
 
   return (
-    <div className="flex-1 flex flex-col bg-blue-100 rounded-2xl p-4">
-      <div className="flex items-center justify-between mb-2">
+    <div className="flex-1 flex flex-col bg-white rounded-3xl shadow-lg p-6">
+      <div className="flex items-center justify-between mb-2 pb-2 border-b border-gray-100">
         <div className="flex items-center gap-3">
           <div
-            className="w-10 h-10 bg-cover bg-center rounded-full"
-            style={{ backgroundImage: `url(${selectedConversation.profileImage || `https://ui-avatars.com/api/?name=${encodeURIComponent(selectedConversation.username)}&background=0D8ABC&color=fff`})` }}
+            className="w-10 h-10 bg-cover bg-center rounded-full border-2 border-white shadow"
+            style={{ backgroundImage: `url(${selectedVenueImage})` }}
           />
           <div
-            className="font-semibold cursor-pointer hover:underline"
+            className="font-semibold text-gray-800 cursor-pointer hover:underline text-lg tracking-tight"
             onClick={() => open({ id: selectedConversation._id })}
           >
             {selectedConversation.username}
           </div>
         </div>
       </div>
-      <hr className="border-gray-300" />
-      <div className="flex-1 overflow-y-auto flex flex-col gap-4 mt-4" ref={messagesRef}>
+      <div className="flex-1 overflow-y-auto flex flex-col gap-4 mt-2 custom-scrollbar" ref={messagesRef}>
         {groupedMessages.length === 0 ? (
-          <div className="flex-1 flex items-center justify-center text-gray-500">
+          <div className="flex-1 flex items-center justify-center text-gray-300">
             No messages yet. Start a conversation!
           </div>
         ) : (
           groupedMessages.map((group, i) => (
             <div key={i} className="flex flex-col gap-2">
-              <div className="text-center text-sm text-gray-500">
+              <div className="text-center text-xs text-gray-300 font-medium">
                 {formatTimestamp(group[0].createdAt)}
               </div>
               {group.map((msg) => (
@@ -229,17 +239,19 @@ const ChatBox = ({
                   <div className="flex items-end gap-2 max-w-[75%]">
                     {authUser !== msg.senderId && (
                       <div
-                        className="w-8 h-8 rounded-full bg-center bg-cover"
-                        style={{ backgroundImage: `url(${selectedConversation.profileImage || '/default-avatar.png'})` }}
+                        className="w-8 h-8 rounded-full bg-center bg-cover border-2 border-white shadow"
+                        style={{ backgroundImage: `url(${selectedVenueImage})` }}
                       />
                     )}
                     <div
-                      className={`rounded-2xl shadow-md px-4 py-3 ${
-                        authUser === msg.senderId ? "bg-blue-200" : "bg-white"
+                      className={`rounded-2xl px-5 py-3 shadow-md text-sm font-medium transition-all duration-150 ${
+                        authUser === msg.senderId
+                          ? "bg-gradient-to-br from-gray-100 to-white text-[#7a1313] rounded-br-3xl"
+                          : "bg-white/90 text-gray-700 rounded-bl-3xl"
                       }`}
                     >
-                      <p className="text-sm text-gray-800">{msg.message}</p>
-                      <p className="text-xs text-gray-400 text-right mt-1">
+                      <p>{msg.message}</p>
+                      <p className="text-[10px] text-gray-300 text-right mt-1 font-normal">
                         {formatTimestamp(msg.createdAt)}
                       </p>
                     </div>
@@ -252,24 +264,33 @@ const ChatBox = ({
       </div>
 
       {isTyping && (
-        <div className="text-sm italic text-gray-600 mt-2">
+        <div className="text-xs italic text-gray-400 mt-2">
           {selectedConversation.username} is typing...
         </div>
       )}
 
-      <div className="flex items-center gap-3 mt-4">
-        <input
+      <form
+        className="flex items-center gap-3 mt-6 bg-white/70 rounded-full px-4 py-2 shadow border border-gray-100"
+        onSubmit={e => {
+          e.preventDefault();
+          handleSend();
+        }}
+      >
+        <Input
           type="text"
           placeholder="Type a message"
-          className="flex-1 p-2 rounded-full bg-white border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-400"
+          className="flex-1 bg-transparent border-none focus:ring-0 text-base"
           value={message}
-          onChange={(e) => setMessage(e.target.value)}
+          onChange={e => setMessage(e.target.value)}
           onKeyDown={handleKeyDown}
         />
-        <button onClick={handleSend}>
-          <BsSendFill className="text-blue-600 text-xl hover:text-blue-800" />
-        </button>
-      </div>
+        <Button
+          type="submit"
+          className="bg-[#7a1313] hover:bg-[#a33a3a] text-white px-4 py-2 rounded-full shadow-md transition-all duration-150"
+        >
+          <BsSendFill className="text-lg" />
+        </Button>
+      </form>
     </div>
   );
 };

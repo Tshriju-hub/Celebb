@@ -13,30 +13,48 @@ export const SocketContextProvider = ({ children }) => {
 	const [token, setToken] = useState(null);
 
 	useEffect(() => {
-		// Only run on client
 		if (typeof window !== 'undefined') {
 			const storedToken = localStorage.getItem('token');
-			setToken(storedToken);
+			if (storedToken) {
+				try {
+					const decoded = JSON.parse(atob(storedToken.split('.')[1]));
+					setToken(decoded.userId);
+				} catch (error) {
+					console.error('Error decoding token:', error);
+				}
+			}
 		}
 	}, []);
 
 	useEffect(() => {
 		if (!token) return;
-        console.log('Connecting to socket with token:', token);
+
 		const newSocket = io('http://localhost:5000', {
-			query: {
-				userId: token,
-			},
+			query: { userId: token },
+			transports: ['websocket', 'polling'],
+			reconnectionAttempts: 5,
+			reconnectionDelay: 1000,
+			timeout: 10000
 		});
 
-		setSocket(newSocket);
+		newSocket.on('connect', () => {
+			console.log('Socket connected successfully');
+		});
+
+		newSocket.on('connect_error', (error) => {
+			console.error('Socket connection error:', error);
+		});
 
 		newSocket.on('getOnlineUsers', (users) => {
 			setOnlineUsers(users);
 		});
 
+		setSocket(newSocket);
+
 		return () => {
-			newSocket.disconnect();
+			if (newSocket) {
+				newSocket.disconnect();
+			}
 		};
 	}, [token]);
 
