@@ -414,10 +414,23 @@ const updateBookingStatus = async (req, res) => {
   }
 };
 
+const getBookedDates = async (req, res) => {
+  try {
+    const { venueId } = req.body;
+    const bookings = await Booking.find({ venueId });
+    const bookedDates = bookings.map(booking => booking.date);
+    res.status(200).json(bookedDates);
+  } catch (error) {
+    console.error('Server: Error fetching booked dates:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
 module.exports = {
   createBooking,
   getBookings,
   getOwnerBookings,
   updateBookingStatus,
-  sendMessage
+  sendMessage,
+  getBookedDates
 };

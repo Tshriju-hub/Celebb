@@ -1,144 +1,101 @@
 import React, { useState, useEffect } from 'react';
-import { NepaliDatePicker } from 'nepali-datepicker-reactjs';
-import 'nepali-datepicker-reactjs/dist/index.css';
+import DatePicker from 'react-datepicker';
+import 'react-datepicker/dist/react-datepicker.css';
 import axios from 'axios';
+import { toast, ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 
-const DatePickerWithValidation = ({ value, onChange, eventTime }) => {
+const DatePickerWithValidation = ({ venueId, value, onChange, eventTime }) => {
   const [bookedDates, setBookedDates] = useState([]);
-  const [error, setError] = useState('');
-
   useEffect(() => {
     fetchBookedDates();
-  }, []);
+  }, [venueId]);
 
   const fetchBookedDates = async () => {
     try {
-      const response = await axios.get('http://localhost:5000/api/bookings');
+      const response = await axios.post(
+        'http://localhost:5000/api/bookings/getbookeddates',
+        { venueId },
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${localStorage.getItem('token')}`,
+          },
+        }
+      );
       const bookings = response.data.bookings || [];
-      const approvedBookings = bookings.filter(booking => booking.status === 'approved');
+      const approvedBookings = bookings.filter(b => b.status === 'approved');
       setBookedDates(approvedBookings);
-    } catch (error) {
-      console.error('Error fetching booked dates:', error);
+    } catch (err) {
+      console.error('Error fetching booked dates:', err);
     }
   };
 
-  const isDateBooked = (selectedDate) => {
-    const dateStr = selectedDate.toString();
-    return bookedDates.some(booking => {
-      const bookingDate = new Date(booking.date).toISOString().split('T')[0];
-      return bookingDate === dateStr && booking.eventTime === eventTime;
+  const formatDate = (date) => {
+    if (!date) return '';
+    return date.toISOString().split('T')[0];
+  };
+  const isPastDate = (date) => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const dateCopy = new Date(date);
+    dateCopy.setHours(0, 0, 0, 0);
+    return dateCopy < today;
+  };
+
+  const isBooked = (date) => {
+    const dateCopy = new Date(date);
+    const formatted = formatDate(dateCopy);
+    return bookedDates.some(b => {
+      const bookDate = new Date(b.date).toISOString().split('T')[0];
+      return bookDate === formatted && b.eventTime === eventTime;
     });
   };
 
-  const isPastDate = (selectedDate) => {
-    // Convert Nepali date to English date
-    const [year, month, day] = selectedDate.split('-').map(Number);
-    const selected = new Date(year, month - 1, day);
-    const today = new Date();
-    
-    // Reset time to start of day for both dates
-    selected.setHours(0, 0, 0, 0);
-    today.setHours(0, 0, 0, 0);
-    
-    return selected < today;
-  };
+  const handleDateChange = (selectedDate) => {
+    if (!selectedDate) return;
 
-  const handleDateChange = (date) => {
-    if (isPastDate(date)) {
-      setError('Cannot select past dates');
+    if (isPastDate(selectedDate) || selectedDate.toDateString() === new Date().toDateString()) {
+      toast.error("You cannot select past or today's date.");
       return;
     }
 
-    if (isDateBooked(date)) {
-      setError(`This ${eventTime} shift is already booked for the selected date`);
+    if (isBooked(selectedDate)) {
+      toast.error(`The ${eventTime} shift is already booked on this date.`);
       return;
     }
 
-    setError('');
-    onChange(date);
+    onChange(formatDate(selectedDate));
   };
 
-  const getCustomStyles = (date) => {
-    if (isPastDate(date)) {
-      return { 
-        backgroundColor: '#ffebee', 
-        color: '#c62828',
-        cursor: 'not-allowed',
-        opacity: '0.7',
-        pointerEvents: 'none'
-      };
+  const getDayClassName = (date) => {
+    if (isPastDate(new Date(date)) || isBooked(new Date(date))) {
+      return 'red-date';
     }
-    if (isDateBooked(date)) {
-      return { 
-        backgroundColor: '#fff3e0', 
-        color: '#ef6c00',
-        cursor: 'not-allowed',
-        opacity: '0.7',
-        pointerEvents: 'none'
-      };
-    }
-    return {};
+    return '';
   };
 
   return (
     <div className="w-full">
-      <NepaliDatePicker
-        inputClassName="w-full border border-gray-300 rounded-md p-2"
-        value={value}
+      <DatePicker
+        className="w-full border border-gray-300 rounded-md p-2"
+        selected={value ? new Date(value) : null}
         onChange={handleDateChange}
-        options={{
-          calenderLocale: "ne",
-          valueLocale: "en",
-          dateFormat: "YYYY-MM-DD",
-          customStyles: getCustomStyles,
-          disableBeforeToday: true,
-          readOnlyInput: true,
-          disableDaysBefore: new Date().toISOString().split('T')[0],
-          onDateSelect: (selectedDate) => {
-            if (!isPastDate(selectedDate) && !isDateBooked(selectedDate)) {
-              onChange(selectedDate);
-            }
-          },
-          className: "nepali-datepicker-custom",
-          style: {
-            width: '100%',
-            border: '1px solid #e2e8f0',
-            borderRadius: '0.375rem',
-            padding: '0.5rem'
-          }
-        }}
+        dateFormat="yyyy-MM-dd"
+        minDate={new Date(new Date().setDate(new Date().getDate() + 1))}
+        placeholderText="Select a date"
+        dayClassName={getDayClassName}
       />
-      {error && (
-        <p className="text-red-500 text-sm mt-1">{error}</p>
-      )}
-      <style jsx global>{`
-        .nepali-datepicker-custom .calendar-container {
-          background-color: white;
-          border-radius: 0.375rem;
-          box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-        }
-        .nepali-datepicker-custom .calendar-container .calendar-header {
-          background-color: #f8fafc;
-          border-bottom: 1px solid #e2e8f0;
-        }
-        .nepali-datepicker-custom .calendar-container .calendar-body .calendar-row .calendar-cell.disabled,
-        .nepali-datepicker-custom .calendar-container .calendar-body .calendar-row .calendar-cell.past-date {
-          background-color: #ffebee !important;
-          color: #c62828 !important;
-          cursor: not-allowed !important;
-          opacity: 0.7 !important;
-          pointer-events: none !important;
-        }
-        .nepali-datepicker-custom .calendar-container .calendar-body .calendar-row .calendar-cell.booked {
-          background-color: #fff3e0 !important;
-          color: #ef6c00 !important;
-          cursor: not-allowed !important;
-          opacity: 0.7 !important;
-          pointer-events: none !important;
+      <ToastContainer position="top-right" autoClose={3000} hideProgressBar />
+      <style>{`
+        .red-date {
+          background-color: #ffe6e6 !important;
+          color: #d32f2f !important;
+          font-weight: bold;
         }
       `}</style>
     </div>
   );
 };
 
-export default DatePickerWithValidation; 
+export default DatePickerWithValidation;

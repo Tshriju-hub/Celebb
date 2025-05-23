@@ -4,7 +4,8 @@ const {
   getBookings,
   getOwnerBookings,
   updateBookingStatus,
-  sendMessage
+  sendMessage,
+  getBookedDates
 } = require("../controllers/bookingController");
 const { protect } = require("../middleware/auth");
 const router = express.Router();
@@ -14,6 +15,8 @@ router.post("/", protect, createBooking);
 
 // POST /api/bookings/message - Send message
 router.post("/message", protect, sendMessage);
+
+router.post("/getbookeddates",getBookedDates);
 
 // GET /api/bookings - Get all bookings
 router.get("/", protect, getBookings);

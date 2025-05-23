@@ -760,6 +760,7 @@ const UserBooking = () => {
                         Date:
                       </label>
                       <DatePickerWithValidation
+                        venueId={venueId}
                         value={date}
                         onChange={setDate}
                         eventTime={eventTime}
