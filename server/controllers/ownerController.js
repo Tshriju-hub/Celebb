@@ -21,6 +21,8 @@ const uploadToCloudinary = (fileBuffer) => {
 };
 
 const registerOwner = async (req, res) => {
+  console.log('Received registration data:', req.body); // Log the received data for debugging
+  console.log('Received files:', req.files); // Log the received files for debugging
   try {
     const {
       ownerName,
@@ -40,6 +42,8 @@ const registerOwner = async (req, res) => {
       makeupPrice,
       decorationPrice,
       entertainmentPrice,
+      description,
+      category,
       owner,
       status
     } = req.body;
@@ -58,6 +62,7 @@ const registerOwner = async (req, res) => {
     const hallImagesFiles = req.files?.hallImages || [];
     const companyDocs = req.files?.companyRegistration || [];
     const citizenshipDocs = req.files?.ownerCitizenship || [];
+    const qrcode = req.files?.qrCode || [];
 
     // Upload files to Cloudinary and store the URLs
     const hallImages = await Promise.all(
@@ -69,6 +74,10 @@ const registerOwner = async (req, res) => {
     const ownerCitizenship = await Promise.all(
       citizenshipDocs.map((file) => uploadToCloudinary(file.buffer))
     );
+
+    const qrcodeUrl = await uploadToCloudinary(qrcode[0].buffer);
+    console.log('QR Code URL:', qrcodeUrl); // Log the QR code URL for debugging
+
 
     const registration = new Registration({
       ownerName,
@@ -91,6 +100,9 @@ const registerOwner = async (req, res) => {
       entertainmentPrice,
       companyRegistration,
       ownerCitizenship,
+      description,
+      category,
+      qrCode: qrcodeUrl,
       owner,
       status
     });

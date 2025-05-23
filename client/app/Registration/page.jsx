@@ -31,6 +31,9 @@ export default function PartyPalaceRegistration() {
     hallImages: [],
     companyRegistration: [],
     ownerCitizenship: [],
+    description: "",
+    category: "",
+    qrCode: [],
     owner: "",
     status: "pending",
   });
@@ -120,7 +123,8 @@ export default function PartyPalaceRegistration() {
         if (
           key !== "hallImages" &&
           key !== "companyRegistration" &&
-          key !== "ownerCitizenship"
+          key !== "ownerCitizenship" &&
+          key !== "qrCode"
         ) {
           data.append(key, value);
         }
@@ -137,6 +141,10 @@ export default function PartyPalaceRegistration() {
 
       formData.ownerCitizenship.forEach((file) => {
         data.append("ownerCitizenship", file);
+      });
+
+      formData.qrCode.forEach((file) => {
+        data.append("qrCode", file);
       });
 
       data.append("role", "owner");
@@ -298,6 +306,26 @@ export default function PartyPalaceRegistration() {
                   className="p-2 border rounded w-full"
                 />
               </div>
+              <div>
+                <label className="block text-gray-700">Description</label>
+                <input
+                  name="description"
+                  placeholder="e.g., A Good Hall"
+                  value={formData.description}
+                  onChange={handleChange}
+                  className="p-2 border rounded w-full"
+                />
+                </div>
+                <div>
+                <label className="block text-gray-700">Category</label>
+                <input
+                  name="category"
+                  placeholder="e.g., One Category dorpdown"
+                  value={formData.category}
+                  onChange={handleChange}
+                  className="p-2 border rounded w-full"
+                />
+                </div>
             </div>
 
             <div className="flex justify-end">
@@ -477,6 +505,15 @@ export default function PartyPalaceRegistration() {
                   type="file"
                   multiple
                   onChange={(e) => handleFileUpload(e, "ownerCitizenship")}
+                  className="w-full p-2 border rounded cursor-pointer bg-gray-100"
+                />
+              </div>
+              <div>
+                <label className="block text-gray-700">Qr Code</label>
+                <input
+                  type="file"
+                  multiple
+                  onChange={(e) => handleFileUpload(e, "qrCode")}
                   className="w-full p-2 border rounded cursor-pointer bg-gray-100"
                 />
               </div>

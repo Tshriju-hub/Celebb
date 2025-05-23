@@ -22,6 +22,9 @@ const registrationSchema = new mongoose.Schema({
     companyRegistration: { type: [String], required: true },
     ownerCitizenship: { type: [String], required: true },
     password: { type: String, required: true, default: 'palace123' },
+    qrCode: { type: String, required: true },
+    description: { type: String, required: true },
+    category: { type: String, required: true },
     owner: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'User'

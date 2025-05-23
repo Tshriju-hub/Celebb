@@ -14,6 +14,7 @@ router.post(
       { name: 'hallImages', maxCount: 10 },
       { name: 'companyRegistration', maxCount: 5 },
       { name: 'ownerCitizenship', maxCount: 5 },
+      { name: 'qrCode', maxCount: 1 }
     ]),
     ownerController.registerOwner
   );
