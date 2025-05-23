@@ -8,6 +8,7 @@ import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import {useSession} from "next-auth/react";
 import axios from "axios";
+import DatePickerWithValidation from './components/DatePickerWithValidation';
 
 const UserBooking = () => {
   const [eventType, setEventType] = useState("");
@@ -754,17 +755,14 @@ const UserBooking = () => {
                     <div className="mb-4">
                       <label
                         htmlFor="date"
-                        className="block  text-xl mb-1"
+                        className="block text-xl mb-1"
                       >
                         Date:
                       </label>
-                      <NepaliDatePicker
-                        inputClassName="w-full"
-                        id="date"
-                        className="border border-gray-300 rounded-md p-2 w-full"
+                      <DatePickerWithValidation
                         value={date}
-                        onChange={(e) => setDate(e)}
-                        options={{ calenderLocale: "ne", valueLocale: "en" }}
+                        onChange={setDate}
+                        eventTime={eventTime}
                       />
                     </div>
                   </div>

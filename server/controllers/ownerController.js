@@ -3,13 +3,19 @@ const cloudinary = require('../lib/cloudinary');
 const stream = require('stream');
 
 // Helper to upload a file buffer to Cloudinary
-const uploadToCloudinary = (fileBuffer) => {
+const uploadToCloudinary = (fileBuffer, isDocument = false) => {
   return new Promise((resolve, reject) => {
     const bufferStream = new stream.PassThrough();
     bufferStream.end(fileBuffer);
 
+    const uploadOptions = {
+      resource_type: isDocument ? 'raw' : 'auto',
+      format: isDocument ? 'pdf' : undefined,
+      folder: isDocument ? 'documents' : 'images'
+    };
+
     const uploadStream = cloudinary.uploader.upload_stream(
-      { resource_type: 'auto' },
+      uploadOptions,
       (error, result) => {
         if (error) reject(error);
         else resolve(result.secure_url);
@@ -69,10 +75,10 @@ const registerOwner = async (req, res) => {
       hallImagesFiles.map((file) => uploadToCloudinary(file.buffer))
     );
     const companyRegistration = await Promise.all(
-      companyDocs.map((file) => uploadToCloudinary(file.buffer))
+      companyDocs.map((file) => uploadToCloudinary(file.buffer, true))
     );
     const ownerCitizenship = await Promise.all(
-      citizenshipDocs.map((file) => uploadToCloudinary(file.buffer))
+      citizenshipDocs.map((file) => uploadToCloudinary(file.buffer, true))
     );
 
     const qrcodeUrl = await uploadToCloudinary(qrcode[0].buffer);

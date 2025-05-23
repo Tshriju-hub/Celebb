@@ -6,8 +6,17 @@ import Link from "next/link";
 import axios from "axios";
 import { useSession } from "next-auth/react";
 
+// Import components
+import OwnerDetails from "./components/OwnerDetails";
+import VenueDetails from "./components/VenueDetails";
+import VenueSpace from "./components/VenueSpace";
+import AdditionalServices from "./components/AdditionalServices";
+import DocumentUpload from "./components/DocumentUpload";
+import ReviewSubmit from "./components/ReviewSubmit";
+
 export default function PartyPalaceRegistration() {
   const [step, setStep] = useState(1);
+  const [completedSteps, setCompletedSteps] = useState([1]);
   const { data: session } = useSession();
 
   const [formData, setFormData] = useState({
@@ -32,7 +41,7 @@ export default function PartyPalaceRegistration() {
     companyRegistration: [],
     ownerCitizenship: [],
     description: "",
-    category: "",
+    categories: [],
     qrCode: [],
     owner: "",
     status: "pending",
@@ -63,33 +72,84 @@ export default function PartyPalaceRegistration() {
 
   const handleImageUpload = (e) => {
     const files = Array.from(e.target.files);
-    setFormData((prev) => ({ ...prev, hallImages: files }));
+    setFormData((prev) => ({ ...prev, hallImages: [...prev.hallImages, ...files] }));
+  };
+
+  const handleRemoveImage = (index) => {
+    setFormData((prev) => ({
+      ...prev,
+      hallImages: prev.hallImages.filter((_, i) => i !== index)
+    }));
+  };
+
+  const isStepComplete = (stepNumber) => {
+    switch (stepNumber) {
+      case 1:
+        return !!(formData.ownerName && formData.ownerEmail && formData.ownerPhone);
+      case 2:
+        return !!(formData.name && formData.address && formData.phone && 
+                 formData.established && formData.advancePayment && formData.capacity &&
+                 formData.categories.length > 0);
+      case 3:
+        return !!(formData.spacePreference && formData.numberOfHalls && 
+                 formData.foodSilverPrice && formData.foodGoldPrice && formData.foodDiamondPrice);
+      case 4:
+        return !!(formData.makeupPrice && formData.decorationPrice && formData.entertainmentPrice);
+      case 5:
+        return !!(formData.hallImages.length > 0 && formData.companyRegistration.length > 0 && 
+                 formData.ownerCitizenship.length > 0);
+      default:
+        return false;
+    }
+  };
+
+  const handleStepClick = (stepNumber) => {
+    // Only allow clicking on completed steps or the next available step
+    const maxCompletedStep = Math.max(...completedSteps);
+    if (stepNumber <= maxCompletedStep || stepNumber === maxCompletedStep + 1) {
+      // If trying to move to the next step, validate current step first
+      if (stepNumber === maxCompletedStep + 1) {
+        if (!isStepComplete(step)) {
+          toast.error("Please complete the current step before proceeding.");
+          return;
+        }
+      }
+      setStep(stepNumber);
+    }
   };
 
   const nextStep = () => {
-    if (step === 1) {
-      if (!formData.ownerName || !formData.ownerEmail || !formData.name || !formData.phone || !formData.established || !formData.advancePayment) {
-        toast.error("Please fill in all required fields on this page.");
-        return;
+    if (!isStepComplete(step)) {
+      switch (step) {
+        case 1:
+          toast.error("Please fill in all required owner details.");
+          break;
+        case 2:
+          toast.error("Please fill in all required venue details.");
+          break;
+        case 3:
+          toast.error("Please fill in all required space and pricing details.");
+          break;
+        case 4:
+          toast.error("Please fill in all required service pricing details.");
+          break;
+        case 5:
+          toast.error("Please upload all required documents.");
+          break;
+        default:
+          toast.error("Please complete the current step before proceeding.");
       }
+      return;
     }
-    if (step === 2) {
-      if (!formData.spacePreference || !formData.numberOfHalls || !formData.foodSilverPrice || !formData.foodGoldPrice || !formData.foodDiamondPrice) {
-        toast.error("Please fill in all required fields on this page.");
-        return;
-      }
-    }
-    if (step === 3) {
-      if (!formData.makeupPrice || !formData.decorationPrice || !formData.entertainmentPrice) {
-        toast.error("Please fill in all required fields on this page.");
-        return;
-      }
-    }
-    setStep((prev) => prev + 1);
+
+    // Mark current step as completed
+    setCompletedSteps(prev => [...new Set([...prev, step])]);
+    setStep(prev => prev + 1);
   };
 
-  const prevStep = () => setStep((prev) => prev - 1);
-  const goToStep = (stepNumber) => setStep(stepNumber);
+  const prevStep = () => {
+    setStep(prev => prev - 1);
+  };
 
   const handleSubmit = async () => {
     const numericFields = [
@@ -110,7 +170,7 @@ export default function PartyPalaceRegistration() {
       }
     });
 
-    if (!formData.ownerName || !formData.ownerEmail || !formData.name || !formData.owner) {
+    if (!formData.ownerName || !formData.ownerEmail || !formData.name || !formData.owner || !formData.categories || formData.categories.length === 0) {
       toast.error("Missing required owner or venue details.");
       return;
     }
@@ -118,19 +178,22 @@ export default function PartyPalaceRegistration() {
     try {
       const data = new FormData();
 
-      // Append non-file fields
+      // Handle categories - join them into a comma-separated string
+      const categoryString = formData.categories.join(',');
+      data.append('category', categoryString);
+
       Object.entries(formData).forEach(([key, value]) => {
         if (
           key !== "hallImages" &&
           key !== "companyRegistration" &&
           key !== "ownerCitizenship" &&
-          key !== "qrCode"
+          key !== "qrCode" &&
+          key !== "categories" // Skip categories as we've already handled it
         ) {
           data.append(key, value);
         }
       });
 
-      // Append files
       formData.hallImages.forEach((file) => {
         data.append("hallImages", file);
       });
@@ -168,392 +231,83 @@ export default function PartyPalaceRegistration() {
       }
     } catch (error) {
       console.error("Error submitting registration:", error);
-      toast.error("An error occurred while submitting the registration.");
+      toast.error(error.response?.data?.message || "An error occurred while submitting the registration.");
     }
   };
 
-
   return (
-    <div className="bg-[#EBE4E4] min-h-screen flex flex-col items-center p-8">
+    <div className="min-h-screen bg-[#6D0C0E] flex flex-col items-center p-8">
       <Link href="/" className="mb-6">
-        <img src="/Image/logo.png" alt="Logo" className="h-12" />
+        <img src="/Image/logo.png" alt="Logo" className="h-20 w-auto" />
       </Link>
       <ToastContainer />
 
-      <div className="bg-white shadow-lg p-8 w-full max-w-4xl rounded-lg">
+      <div className="bg-white shadow-2xl p-8 w-full max-w-6xl rounded-2xl">
         <h2 className="text-[#6D0C0E] text-3xl font-bold text-center mb-6">
           Party Palace Registration
         </h2>
-        <p className="text-gray-600 text-center mb-4">
-          Please fill out the form below to register your venue. All fields marked with * are important.
+        <p className="text-gray-600 text-center mb-8">
+          Please fill out the form below to register your venue. All fields marked with * are required.
         </p>
 
-        <div className="flex justify-center gap-2 mb-6">
-          {[1, 2, 3, 4, 5].map((num) => (
+        <div className="flex justify-center gap-4 mb-8">
+          {[1, 2, 3, 4, 5, 6].map((num) => (
             <button
               key={num}
-              onClick={() => goToStep(num)}
-              className={`p-2 rounded-full w-10 h-10 flex items-center justify-center text-white ${
-                step === num ? "bg-[#6D0C0E]" : "bg-gray-400"
+              onClick={() => handleStepClick(num)}
+              className={`w-10 h-10 rounded-full flex items-center justify-center text-white transition-all duration-300 ${
+                step === num
+                  ? "bg-[#6D0C0E] scale-110 shadow-lg"
+                  : completedSteps.includes(num)
+                  ? "bg-green-600 hover:bg-green-700"
+                  : "bg-gray-300 cursor-not-allowed"
               }`}
+              disabled={!completedSteps.includes(num) && num !== Math.max(...completedSteps) + 1}
             >
               {num}
             </button>
           ))}
         </div>
 
-        {step === 1 && (
-          <div className="space-y-4">
-            <h3 className="text-xl font-semibold">Owner Details</h3>
-            <p className="text-gray-600">Enter the owner's details.</p>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-gray-700">Owner Name <span className="text-red-500">*</span></label>
-                <input
-                  name="ownerName"
-                  placeholder="e.g., Shreeju Thapa"
-                  value={formData.ownerName}
-                  onChange={handleChange}
-                  className="p-2 border rounded w-full"
-                />
-              </div>
-              <div>
-                <label className="block text-gray-700">Owner Email <span className="text-red-500">*</span></label>
-                <input
-                  name="ownerEmail"
-                  placeholder="e.g., ShreejuThapa@example.com"
-                  value={formData.ownerEmail}
-                  onChange={handleChange}
-                  className="p-2 border rounded w-full"
-                />
-              </div>
-              <div>
-                <label className="block text-gray-700">Owner Phone Number</label>
-                <input
-                  name="ownerPhone"
-                  placeholder="e.g., 9801234567"
-                  value={formData.ownerPhone}
-                  onChange={handleChange}
-                  className="p-2 border rounded w-full"
-                />
-              </div>
-            </div>
-            <h3 className="text-xl font-semibold">Venue Details</h3>
-            <p className="text-gray-600">Enter the basic details about your venue.</p>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-gray-700">Venue Name <span className="text-red-500">*</span></label>
-                <input
-                  name="name"
-                  placeholder="e.g., Kathmandu Banquet"
-                  value={formData.name}
-                  onChange={handleChange}
-                  className="p-2 border rounded w-full"
-                />
-              </div>
-              <div>
-                <label className="block text-gray-700">Address</label>
-                <input
-                  name="address"
-                  placeholder="e.g., Thamel, Kathmandu"
-                  value={formData.address}
-                  onChange={handleChange}
-                  className="p-2 border rounded w-full"
-                />
-              </div>
-              <div>
-                <label className="block text-gray-700">Phone Number <span className="text-red-500">*</span></label>
-                <input
-                  name="phone"
-                  placeholder="e.g., 9801234567"
-                  value={formData.phone}
-                  onChange={handleChange}
-                  className="p-2 border rounded w-full"
-                  required
-                />
-              </div>
-              <div>
-                <label className="block text-gray-700">Year Established <span className="text-red-500">*</span></label>
-                <input
-                  name="established"
-                  placeholder="e.g., 2015"
-                  value={formData.established}
-                  onChange={handleChange}
-                  className="p-2 border rounded w-full"
-                  required
-                />
-              </div>
-              <div>
-                <label className="block text-gray-700">Advance Payment (NPR) <span className="text-red-500">*</span></label>
-                <input
-                  name="advancePayment"
-                  placeholder="e.g., 50000"
-                  value={formData.advancePayment}
-                  onChange={handleChange}
-                  className="p-2 border rounded w-full"
-                  required
-                />
-              </div>
-              <div>
-                <label className="block text-gray-700">Capacity</label>
-                <input
-                  name="capacity"
-                  placeholder="e.g., 500 people"
-                  value={formData.capacity}
-                  onChange={handleChange}
-                  className="p-2 border rounded w-full"
-                />
-              </div>
-              <div>
-                <label className="block text-gray-700">Description</label>
-                <input
-                  name="description"
-                  placeholder="e.g., A Good Hall"
-                  value={formData.description}
-                  onChange={handleChange}
-                  className="p-2 border rounded w-full"
-                />
-                </div>
-                <div>
-                <label className="block text-gray-700">Category</label>
-                <input
-                  name="category"
-                  placeholder="e.g., One Category dorpdown"
-                  value={formData.category}
-                  onChange={handleChange}
-                  className="p-2 border rounded w-full"
-                />
-                </div>
-            </div>
-
-            <div className="flex justify-end">
-              <button
-                onClick={nextStep}
-                className="bg-[#6D0C0E] text-white px-4 py-2 rounded-md"
-              >
-                Next
-              </button>
-            </div>
-          </div>
-        )}
-
-        {step === 2 && (
-          <div className="space-y-4">
-            <h3 className="text-xl font-semibold">Venue Space & Pricing</h3>
-            <p className="text-gray-600">Provide additional venue space and pricing information.</p>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-gray-700">Space Preference <span className="text-red-500">*</span></label>
-                <input
-                  name="spacePreference"
-                  placeholder="e.g., Open Hall, Closed Hall"
-                  value={formData.spacePreference}
-                  onChange={handleChange}
-                  className="p-2 border rounded w-full"
-                  required
-                />
-              </div>
-              <div>
-                <label className="block text-gray-700">Number of Halls <span className="text-red-500">*</span></label>
-                <input
-                  name="numberOfHalls"
-                  placeholder="e.g., 3"
-                  value={formData.numberOfHalls}
-                  onChange={handleChange}
-                  className="p-2 border rounded w-full"
-                  required
-                />
-              </div>
-              <div>
-                <label className="block text-gray-700">Food Silver Package Price <span className="text-red-500">*</span></label>
-                <input
-                  name="foodSilverPrice"
-                  placeholder="e.g., 3000"
-                  value={formData.foodSilverPrice}
-                  onChange={handleChange}
-                  className="p-2 border rounded w-full"
-                  required
-                />
-              </div>
-              <div>
-                <label className="block text-gray-700">Food Gold Package Price <span className="text-red-500">*</span></label>
-                <input
-                  name="foodGoldPrice"
-                  placeholder="e.g., 5000"
-                  value={formData.foodGoldPrice}
-                  onChange={handleChange}
-                  className="p-2 border rounded w-full"
-                  required
-                />
-              </div>
-              <div>
-                <label className="block text-gray-700">Food Diamond Package Price <span className="text-red-500">*</span></label>
-                <input
-                  name="foodDiamondPrice"
-                  placeholder="e.g., 7000"
-                  value={formData.foodDiamondPrice}
-                  onChange={handleChange}
-                  className="p-2 border rounded w-full"
-                  required
-                />
-              </div>
-            </div>
-
-            <div className="flex justify-between">
-              <button
-                onClick={prevStep}
-                className="bg-gray-500 text-white px-4 py-2 rounded"
-              >
-                Back
-              </button>
-              <button
-                onClick={nextStep}
-                className="bg-[#6D0C0E] text-white px-4 py-2 rounded"
-              >
-                Next
-              </button>
-            </div>
-          </div>
-        )}
-        {step === 3 && (
-          <div className="space-y-4">
-            <h3 className="text-xl font-semibold">Additional Services Pricing</h3>
-            <p className="text-gray-600">Provide pricing details for additional services.</p>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-gray-700">Makeup Price <span className="text-red-500">*</span></label>
-                <input
-                  name="makeupPrice"
-                  placeholder="e.g., 5000"
-                  value={formData.makeupPrice}
-                  onChange={handleChange}
-                  className="p-2 border rounded w-full"
-                  required
-                />
-              </div>
-              <div>
-                <label className="block text-gray-700">Decoration Price <span className="text-red-500">*</span></label>
-                <input
-                  name="decorationPrice"
-                  placeholder="e.g., 15000"
-                  value={formData.decorationPrice}
-                  onChange={handleChange}
-                  className="p-2 border rounded w-full"
-                  required
-                />
-              </div>
-              <div>
-                <label className="block text-gray-700">Entertainment Price <span className="text-red-500">*</span></label>
-                <input
-                  name="entertainmentPrice"
-                  placeholder="e.g., 10000"
-                  value={formData.entertainmentPrice}
-                  onChange={handleChange}
-                  className="p-2 border rounded w-full"
-                  required
-                />
-              </div>
-            </div>
-
-            <div className="flex justify-between">
-              <button
-                onClick={prevStep}
-                className="bg-gray-500 text-white px-4 py-2 rounded"
-              >
-                Back
-              </button>
-              <button
-                onClick={nextStep}
-                className="bg-[#6D0C0E] text-white px-4 py-2 rounded"
-              >
-                Next
-              </button>
-            </div>
-          </div>
-        )}
-        {step === 4 && (
-          <div className="space-y-4">
-            <h3 className="text-xl font-semibold">Upload Images & Documents</h3>
-            <p className="text-gray-600">Please upload relevant images and documents.</p>
-            
-            <div className="space-y-4">
-              <div>
-                <label className="block text-gray-700">Hall Images</label>
-                <input
-                  type="file"
-                  multiple
-                  onChange={handleImageUpload}
-                  className="w-full p-2 border rounded cursor-pointer bg-gray-100"
-                />
-              </div>
-              <div>
-                <label className="block text-gray-700">Company Registration Document</label>
-                <input
-                  type="file"
-                  multiple
-                  onChange={(e) => handleFileUpload(e, "companyRegistration")}
-                  className="w-full p-2 border rounded cursor-pointer bg-gray-100"
-                />
-              </div>
-              <div>
-                <label className="block text-gray-700">Owner's Citizenship Document</label>
-                <input
-                  type="file"
-                  multiple
-                  onChange={(e) => handleFileUpload(e, "ownerCitizenship")}
-                  className="w-full p-2 border rounded cursor-pointer bg-gray-100"
-                />
-              </div>
-              <div>
-                <label className="block text-gray-700">Qr Code</label>
-                <input
-                  type="file"
-                  multiple
-                  onChange={(e) => handleFileUpload(e, "qrCode")}
-                  className="w-full p-2 border rounded cursor-pointer bg-gray-100"
-                />
-              </div>
-            </div>
-
-            <div className="flex justify-between">
-              <button
-                onClick={prevStep}
-                className="bg-gray-500 text-white px-4 py-2 rounded"
-              >
-                Back
-              </button>
-              <button
-                onClick={nextStep}
-                className="bg-[#6D0C0E] text-white px-4 py-2 rounded"
-              >
-                Next
-              </button>
-            </div>
-          </div>
-        )}
+        {step === 1 && <OwnerDetails formData={formData} handleChange={handleChange} />}
+        {step === 2 && <VenueDetails formData={formData} handleChange={handleChange} />}
+        {step === 3 && <VenueSpace formData={formData} handleChange={handleChange} />}
+        {step === 4 && <AdditionalServices formData={formData} handleChange={handleChange} />}
         {step === 5 && (
-          <div className="space-y-4">
-            <h3 className="text-xl font-semibold">Review & Submit</h3>
-            <p className="text-gray-600">Please review all details before submission.</p>
-            <div className="p-4 border rounded bg-gray-50">
-              {Object.entries(formData).map(([key, value]) => (
-                <p key={key} className="text-gray-700">
-                  <strong className="capitalize">{key.replace(/([A-Z])/g, ' $1')}:</strong> {Array.isArray(value) ? value.length + " file(s) uploaded" : value || "N/A"}
-                </p>
-              ))}
-
-            </div>
-
-            <div className="flex justify-between">
-              <button onClick={prevStep} className="bg-gray-500 text-white px-4 py-2 rounded">Back</button>
-              <button onClick={handleSubmit} className="bg-green-600 text-white px-4 py-2 rounded">Submit</button>
-            </div>
-          </div>
+          <DocumentUpload
+            handleImageUpload={handleImageUpload}
+            handleFileUpload={handleFileUpload}
+            handleRemoveImage={handleRemoveImage}
+            formData={formData}
+          />
         )}
+        {step === 6 && <ReviewSubmit formData={formData} />}
+
+        <div className="flex justify-between mt-8">
+          {step > 1 && (
+            <button
+              onClick={prevStep}
+              className="bg-gray-500 text-white px-6 py-2 rounded-lg hover:bg-gray-600 transition-colors"
+            >
+              Back
+            </button>
+          )}
+          {step < 6 ? (
+            <button
+              onClick={nextStep}
+              className="bg-[#6D0C0E] text-white px-6 py-2 rounded-lg hover:bg-[#8D0C0E] transition-colors ml-auto"
+            >
+              Next
+            </button>
+          ) : (
+            <button
+              onClick={handleSubmit}
+              className="bg-green-600 text-white px-6 py-2 rounded-lg hover:bg-green-700 transition-colors ml-auto"
+            >
+              Submit
+            </button>
+          )}
+        </div>
       </div>
     </div>
   );
