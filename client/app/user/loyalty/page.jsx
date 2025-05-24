@@ -7,10 +7,19 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useSession } from "next-auth/react";
 import axios from "axios";
 import "react-toastify/dist/ReactToastify.css";
-import { FaGift, FaHistory, FaCrown, FaChartLine, FaMedal, FaTrophy } from 'react-icons/fa';
+import { FaGift, FaHistory, FaCrown, FaChartLine, FaMedal, FaTrophy, FaFire, FaCalendarAlt, FaCoins, FaCheck, FaInfoCircle } from 'react-icons/fa';
+import { Tooltip } from 'react-tooltip';
 
 const themeColor = "#7a1313";
 const bgColor = "#EBE4E4";
+
+// Tier thresholds and rewards
+const TIERS = {
+  SILVER: { threshold: 0, points: 50, streak: 1 },
+  GOLD: { threshold: 200, points: 75, streak: 3 },
+  PLATINUM: { threshold: 500, points: 100, streak: 7 },
+  DIAMOND: { threshold: 1000, points: 150, streak: 14 }
+};
 
 const LoyaltyPage = () => {
   const { data: session, status } = useSession();
@@ -21,6 +30,11 @@ const LoyaltyPage = () => {
   const [loyaltyHistory, setLoyaltyHistory] = useState([]);
   const [loading, setLoading] = useState(true);
   const [animateNumber, setAnimateNumber] = useState(0);
+  const [streak, setStreak] = useState(0);
+  const [nextClaimTime, setNextClaimTime] = useState(null);
+  const [dailyBonus, setDailyBonus] = useState(50);
+  const [showStreakInfo, setShowStreakInfo] = useState(false);
+  const [showCheckInAnimation, setShowCheckInAnimation] = useState(false);
 
   // Fetch loyalty points when session is available
   const fetchLoyaltyPoints = async () => {
@@ -34,16 +48,27 @@ const LoyaltyPage = () => {
         return;
       }
 
-      // Use the correct endpoint for loyalty points
       const res = await axios.get("http://localhost:5000/api/loyalty/points", {
         headers: {
           Authorization: `Bearer ${session.user.token}`,
         },
       });
       
-      // The response contains loyalty points data
       setLoyaltyPoints(res.data.points || 0);
       setClaimed(!res.data.canClaimDaily);
+      setStreak(res.data.streak || 0);
+      
+      // Calculate next claim time
+      if (res.data.lastClaimed) {
+        const lastClaimed = new Date(res.data.lastClaimed);
+        const nextClaim = new Date(lastClaimed);
+        nextClaim.setDate(nextClaim.getDate() + 1);
+        setNextClaimTime(nextClaim);
+      }
+
+      // Calculate daily bonus based on streak
+      const bonus = calculateDailyBonus(res.data.streak || 0);
+      setDailyBonus(bonus);
       
       // Fetch loyalty history
       const historyRes = await axios.get("http://localhost:5000/api/loyalty/history", {
@@ -61,6 +86,13 @@ const LoyaltyPage = () => {
     }
   };
 
+  const calculateDailyBonus = (currentStreak) => {
+    if (currentStreak >= TIERS.DIAMOND.streak) return TIERS.DIAMOND.points;
+    if (currentStreak >= TIERS.PLATINUM.streak) return TIERS.PLATINUM.points;
+    if (currentStreak >= TIERS.GOLD.streak) return TIERS.GOLD.points;
+    return TIERS.SILVER.points;
+  };
+
   // Claim daily point
   const handleClaim = async () => {
     try {
@@ -70,7 +102,6 @@ const LoyaltyPage = () => {
         return;
       }
 
-      // Use the correct endpoint for claiming daily points
       const res = await axios.post(
         "http://localhost:5000/api/loyalty/claim-daily",
         {},
@@ -84,10 +115,9 @@ const LoyaltyPage = () => {
       setClaimed(true);
       setShowConfetti(true);
       setShowModal(true);
-      toast.success(res.data.message || "Point claimed!");
+      toast.success(res.data.message || "Points claimed!");
       setTimeout(() => setShowConfetti(false), 5000);
       
-      // Refresh loyalty points
       fetchLoyaltyPoints();
     } catch (err) {
       toast.error(err.response?.data?.message || "Error claiming points");
@@ -111,13 +141,157 @@ const LoyaltyPage = () => {
   }, [loyaltyPoints]);
 
   const getLoyaltyTier = (points) => {
-    if (points >= 1000) return { name: 'Diamond', icon: FaCrown, color: 'text-blue-500' };
-    if (points >= 500) return { name: 'Platinum', icon: FaTrophy, color: 'text-purple-500' };
-    if (points >= 200) return { name: 'Gold', icon: FaMedal, color: 'text-yellow-500' };
-    return { name: 'Silver', icon: FaGift, color: 'text-gray-500' };
+    if (points >= TIERS.DIAMOND.threshold) return { name: 'Diamond', icon: FaCrown, color: 'text-blue-500', points: TIERS.DIAMOND.points };
+    if (points >= TIERS.PLATINUM.threshold) return { name: 'Platinum', icon: FaTrophy, color: 'text-purple-500', points: TIERS.PLATINUM.points };
+    if (points >= TIERS.GOLD.threshold) return { name: 'Gold', icon: FaMedal, color: 'text-yellow-500', points: TIERS.GOLD.points };
+    return { name: 'Silver', icon: FaGift, color: 'text-gray-500', points: TIERS.SILVER.points };
   };
 
   const tier = getLoyaltyTier(loyaltyPoints);
+
+  const renderStreakBar = () => {
+    const today = new Date();
+    const days = Array.from({ length: 7 }, (_, i) => {
+      const date = new Date();
+      date.setDate(today.getDate() - (6 - i));
+      return {
+        day: i + 1,
+        date: date,
+        isCompleted: streak > i,
+        isToday: i === 6
+      };
+    });
+
+    return (
+      <div className="mb-8">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2">
+            <FaFire className="text-orange-500" />
+            <span className="font-semibold">7-Day Streak Progress</span>
+          </div>
+          <button
+            className="text-gray-500 hover:text-[#7a1313] transition-colors"
+            onClick={() => setShowStreakInfo(!showStreakInfo)}
+            data-tooltip-id="streak-info"
+          >
+            <FaInfoCircle className="text-xl" />
+          </button>
+          <Tooltip
+            id="streak-info"
+            place="bottom"
+            className="max-w-xs"
+            content={
+              <div className="p-2">
+                <h3 className="font-semibold mb-2">How Streaks Work</h3>
+                <ul className="text-sm space-y-1">
+                  <li>• Check in daily to maintain your streak</li>
+                  <li>• Earn bonus points for consecutive days</li>
+                  <li>• Streak resets if you miss a day</li>
+                  <li>• Higher streaks unlock better rewards</li>
+                </ul>
+              </div>
+            }
+          />
+        </div>
+
+        <div className="flex justify-between items-center mb-4">
+          {days.map((day, index) => (
+            <motion.div
+              key={index}
+              className={`relative flex flex-col items-center ${
+                day.isToday ? 'scale-110' : ''
+              }`}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: index * 0.1 }}
+            >
+              <div
+                className={`w-12 h-12 rounded-xl flex items-center justify-center mb-2 transition-all duration-300 ${
+                  day.isCompleted
+                    ? 'bg-gradient-to-br from-green-500 to-green-600 text-white'
+                    : day.isToday
+                    ? 'bg-gradient-to-br from-[#7a1313] to-[#991c1c] text-white'
+                    : 'bg-gray-100 text-gray-400'
+                }`}
+              >
+                {day.isCompleted ? (
+                  <FaCheck className="text-xl" />
+                ) : (
+                  <FaCoins className="text-xl" />
+                )}
+              </div>
+              <span className="text-sm font-medium">Day {day.day}</span>
+              {day.isToday && (
+                <motion.div
+                  className="absolute -top-2 -right-2 w-4 h-4 bg-orange-500 rounded-full"
+                  animate={{ scale: [1, 1.2, 1] }}
+                  transition={{ duration: 1, repeat: Infinity }}
+                />
+              )}
+            </motion.div>
+          ))}
+        </div>
+
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2">
+            <FaCoins className="text-yellow-500" />
+            <span className="font-medium">Total Points Earned: {loyaltyPoints}</span>
+          </div>
+          <button
+            className={`px-6 py-2 rounded-xl text-white font-medium transition-all duration-300 transform hover:scale-105 ${
+              claimed
+                ? 'bg-gray-400 cursor-not-allowed'
+                : 'bg-[#7a1313] hover:bg-[#991c1c] shadow-lg hover:shadow-xl'
+            }`}
+            onClick={handleClaim}
+            disabled={claimed}
+          >
+            <div className="flex items-center gap-2">
+              <FaGift className="text-xl" />
+              {claimed ? 'Already Checked In' : 'Check In'}
+            </div>
+          </button>
+        </div>
+
+        {/* Check-in Animation */}
+        <AnimatePresence>
+          {showCheckInAnimation && (
+            <motion.div
+              className="fixed inset-0 pointer-events-none"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+            >
+              {[...Array(10)].map((_, i) => (
+                <motion.div
+                  key={i}
+                  className="absolute text-yellow-500 text-2xl"
+                  initial={{
+                    x: '50vw',
+                    y: '50vh',
+                    opacity: 1,
+                    scale: 1
+                  }}
+                  animate={{
+                    x: `${Math.random() * 100}vw`,
+                    y: `${Math.random() * 100}vh`,
+                    opacity: 0,
+                    scale: 0
+                  }}
+                  transition={{
+                    duration: 1,
+                    ease: "easeOut"
+                  }}
+                >
+                  <FaCoins />
+                </motion.div>
+              ))}
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+    );
+  };
 
   if (status === "loading" || loading) {
     return (
@@ -184,27 +358,7 @@ const LoyaltyPage = () => {
               </div>
             </div>
             <div className="p-8">
-              <div className="flex flex-col items-center">
-                <button
-                  className={`w-full py-4 rounded-2xl text-white font-medium text-lg transition-all duration-300 transform hover:scale-105 ${
-                    claimed
-                      ? "bg-gray-400 cursor-not-allowed"
-                      : "bg-[#7a1313] hover:bg-[#991c1c] shadow-lg hover:shadow-xl"
-                  }`}
-                  onClick={handleClaim}
-                  disabled={claimed}
-                >
-                  <div className="flex items-center justify-center gap-2">
-                    <FaGift className="text-xl" />
-                    {claimed ? "Already Claimed Today" : "Claim Daily Point"}
-                  </div>
-                </button>
-                {claimed && (
-                  <p className="text-sm text-gray-500 mt-3">
-                    Next claim available in {24 - new Date().getHours()} hours
-                  </p>
-                )}
-              </div>
+              {renderStreakBar()}
             </div>
           </motion.div>
 
@@ -220,33 +374,35 @@ const LoyaltyPage = () => {
               Progress to Next Tier
             </h2>
             <div className="space-y-6">
-              {[
-                { name: 'Silver', threshold: 0, icon: FaGift },
-                { name: 'Gold', threshold: 200, icon: FaMedal },
-                { name: 'Platinum', threshold: 500, icon: FaTrophy },
-                { name: 'Diamond', threshold: 1000, icon: FaCrown }
-              ].map((tierLevel, index) => (
-                <div key={index} className="relative">
+              {Object.entries(TIERS).map(([key, tierLevel]) => (
+                <div key={key} className="relative">
                   <div className="flex items-center justify-between mb-2">
                     <div className="flex items-center gap-2">
-                      <tierLevel.icon className={`text-lg ${
-                        loyaltyPoints >= tierLevel.threshold ? 'text-[#7a1313]' : 'text-gray-400'
-                      }`} />
+                      {key === 'DIAMOND' && <FaCrown className="text-blue-500" />}
+                      {key === 'PLATINUM' && <FaTrophy className="text-purple-500" />}
+                      {key === 'GOLD' && <FaMedal className="text-yellow-500" />}
+                      {key === 'SILVER' && <FaGift className="text-gray-500" />}
                       <span className={loyaltyPoints >= tierLevel.threshold ? 'font-semibold' : ''}>
-                        {tierLevel.name}
+                        {key.charAt(0) + key.slice(1).toLowerCase()}
                       </span>
                     </div>
-                    <span className="text-sm text-gray-500">{tierLevel.threshold} points</span>
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm text-gray-500">{tierLevel.threshold} points</span>
+                      <FaCoins className="text-yellow-500" />
+                    </div>
                   </div>
                   <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
                     <motion.div
-                      className="h-full bg-[#7a1313]"
+                      className="h-full bg-gradient-to-r from-[#7a1313] to-[#991c1c]"
                       initial={{ width: 0 }}
                       animate={{ 
                         width: `${Math.min(100, (loyaltyPoints / tierLevel.threshold) * 100 || 0)}%`
                       }}
                       transition={{ duration: 1, delay: 0.5 }}
                     />
+                  </div>
+                  <div className="mt-1 text-xs text-gray-500">
+                    Daily Bonus: +{tierLevel.points} points
                   </div>
                 </div>
               ))}
@@ -273,6 +429,7 @@ const LoyaltyPage = () => {
                     <th className="py-3 px-4 text-left font-semibold text-gray-600">Date</th>
                     <th className="py-3 px-4 text-left font-semibold text-gray-600">Activity</th>
                     <th className="py-3 px-4 text-left font-semibold text-gray-600">Points</th>
+                    <th className="py-3 px-4 text-left font-semibold text-gray-600">Streak</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -294,6 +451,14 @@ const LoyaltyPage = () => {
                         }`}>
                           {item.points > 0 ? `+${item.points}` : item.points}
                         </span>
+                      </td>
+                      <td className="py-3 px-4">
+                        {item.action === 'daily_claim' && (
+                          <div className="flex items-center gap-1">
+                            <FaFire className="text-orange-500" />
+                            <span>{item.streak || 1} days</span>
+                          </div>
+                        )}
                       </td>
                     </motion.tr>
                   ))}
@@ -335,10 +500,15 @@ const LoyaltyPage = () => {
                 <h2 className="text-2xl font-bold text-[#7a1313] mb-2">
                   🎉 Congratulations!
                 </h2>
-                <p className="text-gray-600 mb-6">
-                  You've earned a daily loyalty point!
-                  <br />
-                  Keep collecting to reach the next tier.
+                <p className="text-gray-600 mb-4">
+                  You've earned {dailyBonus} daily loyalty points!
+                </p>
+                <div className="flex items-center justify-center gap-2 mb-6">
+                  <FaFire className="text-orange-500" />
+                  <span className="font-semibold">Current Streak: {streak} days</span>
+                </div>
+                <p className="text-sm text-gray-500 mb-6">
+                  Keep collecting to reach the next tier and earn more points!
                 </p>
                 <button
                   className="w-full px-6 py-3 rounded-xl bg-[#7a1313] text-white hover:bg-[#991c1c] transition transform hover:scale-105"

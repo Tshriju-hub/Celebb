@@ -32,6 +32,9 @@ export default function ServicesPage() {
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [toastMsg, setToastMsg] = useState({ type: '', message: '' });
+  const [showUploadConfirmModal, setShowUploadConfirmModal] = useState(false);
+  const [selectedFile, setSelectedFile] = useState(null);
+  const [selectedCategory, setSelectedCategory] = useState(null);
 
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -85,14 +88,23 @@ export default function ServicesPage() {
     return true;
   };
 
-  const handleImageUpload = async (category, file) => {
+  const handleImageSelect = (category, file) => {
     if (!file || !validateImage(file)) {
+      return;
+    }
+    setSelectedFile(file);
+    setSelectedCategory(category);
+    setShowUploadConfirmModal(true);
+  };
+
+  const handleConfirmedUpload = async () => {
+    if (!selectedFile || !selectedCategory) {
       return;
     }
 
     const formData = new FormData();
-    formData.append('image', file);
-    formData.append('category', category);
+    formData.append('image', selectedFile);
+    formData.append('category', selectedCategory);
 
     try {
       setUploading(true);
@@ -110,6 +122,9 @@ export default function ServicesPage() {
       setToastMsg({ type: 'error', message: errorMessage });
     } finally {
       setUploading(false);
+      setShowUploadConfirmModal(false);
+      setSelectedFile(null);
+      setSelectedCategory(null);
     }
   };
 
@@ -163,7 +178,7 @@ export default function ServicesPage() {
                     id={`${category.id}-upload`}
                     className="hidden"
                     accept="image/*"
-                    onChange={(e) => handleImageUpload(category.id, e.target.files[0])}
+                    onChange={(e) => handleImageSelect(category.id, e.target.files[0])}
                     disabled={uploading}
                   />
                   <label
@@ -225,6 +240,41 @@ export default function ServicesPage() {
             </div>
           ))}
         </div>
+
+        {/* Upload Confirmation Modal */}
+        {showUploadConfirmModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+              <h3 className="text-xl font-semibold text-gray-900 mb-4">Confirm Upload</h3>
+              <p className="text-gray-600 mb-6">
+                Are you sure you want to upload this image to {selectedCategory} services?
+              </p>
+              <div className="flex justify-end space-x-4">
+                <button
+                  onClick={() => {
+                    setShowUploadConfirmModal(false);
+                    setSelectedFile(null);
+                    setSelectedCategory(null);
+                  }}
+                  className="px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleConfirmedUpload}
+                  disabled={uploading}
+                  className={`px-4 py-2 rounded-lg ${
+                    uploading
+                      ? 'bg-gray-400 cursor-not-allowed'
+                      : 'bg-[#7a1313] hover:bg-[#8f1717]'
+                  } text-white transition-colors`}
+                >
+                  {uploading ? 'Uploading...' : 'Confirm Upload'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </main>
     </div>
   );

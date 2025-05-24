@@ -13,6 +13,7 @@ const reviewRoutes = require('./routes/reviews');
 const loyaltyRoutes = require('./routes/loyaltyRoutes');
 const notificationRoutes = require('./routes/notifications');
 const analyticsRoutes = require('./routes/analyticsRoutes');
+const serviceImagesRoutes = require('./routes/serviceImages');
 const { app, server } = require('./socket/socket');
 
 dotenv.config();
@@ -43,6 +44,7 @@ app.use('/api/news', require('./routes/news'));
 app.use('/api/loyalty', loyaltyRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/analytics', analyticsRoutes);
+app.use('/api/service-images', serviceImagesRoutes);
 app.use('/uploads', express.static('uploads'));
 app.use('/messages', require('./routes/message'));
 
