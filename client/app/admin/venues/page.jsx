@@ -307,95 +307,155 @@ const VenueManagement = () => {
         {isPreviewModalOpen && previewVenue && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
             <div className="bg-white p-8 rounded-lg w-[75%] h-[95%] max-w-6xl shadow-xl space-y-6 relative overflow-y-auto">
-              {/* Dynamic Title */}
-              <h2 className="text-xl font-semibold text-[#7a1313]">
-                {currentIndex < previewVenue.hallImages.length
-                  ? `Hall Image ${currentIndex + 1}`
-                  : currentIndex === previewVenue.hallImages.length
-                  ? "Owner Citizenship"
-                  : "Company Certificate"}
-              </h2>
 
-              {/* Carousel for All Images */}
+              {/* Title */}              <h2 className="text-xl font-semibold text-[#7a1313]">
+                {(() => {
+                  const hallImagesLength = previewVenue.hallImages.length;
+                  
+                  if (currentIndex < hallImagesLength) {
+                    return `Hall Image ${currentIndex + 1}`;
+                  } else if (currentIndex === hallImagesLength) {
+                    const isPDF = (url) => {
+                      if (typeof url !== 'string') return false;
+                      return /\.pdf($|\?)/i.test(url) || url.includes('/raw/') || url.includes('/documents/');
+                    };
+                    const citizenshipFile = Array.isArray(previewVenue.ownerCitizenship) 
+                      ? previewVenue.ownerCitizenship[0] 
+                      : previewVenue.ownerCitizenship;
+                    
+                    return `Owner Citizenship ${isPDF(citizenshipFile) ? '(PDF)' : ''}`;
+                  } else {
+                    const isPDF = (url) => {
+                      if (typeof url !== 'string') return false;
+                      return /\.pdf($|\?)/i.test(url) || url.includes('/raw/') || url.includes('/documents/');
+                    };
+                    const certificateFile = Array.isArray(previewVenue.companyRegistration) 
+                      ? previewVenue.companyRegistration[0] 
+                      : previewVenue.companyRegistration;
+                    
+                    return `Company Certificate ${isPDF(certificateFile) ? '(PDF)' : ''}`;
+                  }
+                })()}
+              </h2>{/* Preview Display */}
               <div className="relative">
-                {currentIndex < previewVenue.hallImages.length ? (
-                  <img
-                    src={previewVenue.hallImages[currentIndex]}
-                    alt={`Hall ${currentIndex + 1}`}
-                    className="w-full rounded-md shadow-lg h-[60vh] object-cover"
-                  />
-                ) : currentIndex === previewVenue.hallImages.length ? (
-                  <img
-                    src={previewVenue.ownerCitizenship}
-                    alt="Owner Citizenship"
-                    className="w-full rounded-md shadow-lg h-[60vh] object-cover"
-                  />
-                ) : (
-                  <img
-                    src={previewVenue.companyRegistration}
-                    alt="Company Certificate"
-                    className="w-full rounded-md shadow-lg h-[60vh] object-cover"
-                  />
-                )}
+                {(() => {
+                  const totalImages = previewVenue.hallImages.length;
+                  const files = [
+                    ...previewVenue.hallImages,
+                    previewVenue.ownerCitizenship,
+                    previewVenue.companyRegistration,
+                  ].flat(); // Flatten arrays in case they contain arrays of URLs
+                  const currentFile = files[currentIndex];
 
-                {/* Left Arrow Button */}
+                  const isPDF = (url) => {
+                    if (typeof url !== 'string') return false;
+                    return /\.pdf($|\?)/i.test(url) || url.includes('/raw/') || url.includes('/documents/');
+                  };
+
+                  return isPDF(currentFile) ? (
+                    <div className="w-full h-[60vh] flex flex-col items-center justify-center bg-gray-100 rounded-md shadow-lg">
+                      <iframe
+                        src={`https://docs.google.com/gview?embedded=true&url=${encodeURIComponent(currentFile)}`}
+                        title="PDF Preview"
+                        className="w-full h-full rounded-md"
+                        onError={(e) => {
+                          e.target.style.display = 'none';
+                          document.getElementById('pdf-fallback').style.display = 'flex';
+                        }}
+                      />
+                      <div id="pdf-fallback" className="hidden absolute inset-0 flex-col items-center justify-center bg-gray-100">
+                        <p className="text-gray-700 mb-4">PDF viewer couldn't load the document</p>
+                        <a 
+                          href={currentFile} 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="bg-[#7a1313] text-white px-4 py-2 rounded hover:bg-[#5a0e0e]"
+                        >
+                          Open PDF in New Tab
+                        </a>
+                      </div>
+                    </div>
+                  ) : (
+                    <img
+                      src={currentFile}
+                      alt={`Preview ${currentIndex + 1}`}
+                      className="w-full h-[60vh] object-cover rounded-md shadow-lg"
+                    />
+                  );
+                })()}                {/* Navigation Arrows */}
                 <button
                   onClick={() => {
-                    if (currentIndex === 0) {
-                      setCurrentIndex(previewVenue.hallImages.length + 1);
-                    } else {
-                      setCurrentIndex(currentIndex - 1);
-                    }
+                    const files = [
+                      ...previewVenue.hallImages,
+                      previewVenue.ownerCitizenship,
+                      previewVenue.companyRegistration
+                    ].flat();
+                    const total = files.length;
+                    setCurrentIndex((currentIndex - 1 + total) % total);
                   }}
-                  className="absolute top-1/2 left-0 transform -translate-y-1/2 bg-black bg-opacity-70 text-white p-2 rounded-full z-10"
+                  className="absolute top-1/2 left-0 transform -translate-y-1/2 bg-black bg-opacity-70 text-white p-3 rounded-full z-10 hover:bg-black hover:bg-opacity-80 transition"
                 >
                   &lt;
                 </button>
-                {/* Right Arrow Button */}
+
                 <button
                   onClick={() => {
-                    if (currentIndex === previewVenue.hallImages.length + 1) {
-                      setCurrentIndex(0);
-                    } else {
-                      setCurrentIndex(currentIndex + 1);
-                    }
+                    const files = [
+                      ...previewVenue.hallImages,
+                      previewVenue.ownerCitizenship,
+                      previewVenue.companyRegistration
+                    ].flat();
+                    const total = files.length;
+                    setCurrentIndex((currentIndex + 1) % total);
                   }}
-                  className="absolute top-1/2 right-0 transform -translate-y-1/2 bg-black bg-opacity-70 text-white p-2 rounded-full z-10"
+                  className="absolute top-1/2 right-0 transform -translate-y-1/2 bg-black bg-opacity-70 text-white p-3 rounded-full z-10 hover:bg-black hover:bg-opacity-80 transition"
                 >
                   &gt;
                 </button>
-                {/* Image Index */}
+
+                {/* Index Indicator */}
                 <div className="absolute bottom-2 right-2 bg-black bg-opacity-60 text-white text-xs px-2 py-1 rounded">
-                  {currentIndex + 1} / {previewVenue.hallImages.length + 2}
+                  {currentIndex + 1} / {[...previewVenue.hallImages, previewVenue.ownerCitizenship, previewVenue.companyRegistration].flat().length}
                 </div>
+              </div>              {/* Thumbnails */}
+              <div className="flex flex-wrap gap-2 justify-center mt-2">
+                {(() => {
+                  const files = [
+                    ...previewVenue.hallImages,
+                    previewVenue.ownerCitizenship,
+                    previewVenue.companyRegistration
+                  ].flat(); // Flatten arrays in case they contain arrays of URLs
+                  
+                  const isPDF = (url) => {
+                    if (typeof url !== 'string') return false;
+                    return /\.pdf($|\?)/i.test(url) || url.includes('/raw/') || url.includes('/documents/');
+                  };
+
+                  return files.map((file, idx) => isPDF(file) ? (
+                    <div
+                      key={idx}
+                      onClick={() => setCurrentIndex(idx)}
+                      className={`h-12 w-16 flex items-center justify-center bg-gray-200 rounded border-2 ${
+                        currentIndex === idx ? 'border-[#7a1313]' : 'border-transparent'
+                      } cursor-pointer hover:bg-gray-300 transition`}
+                    >
+                      <span className="text-xs text-gray-700 font-medium">PDF</span>
+                    </div>
+                  ) : (
+                    <img
+                      key={idx}
+                      src={file}
+                      alt={`Thumbnail ${idx + 1}`}
+                      onClick={() => setCurrentIndex(idx)}
+                      className={`h-12 w-16 object-cover rounded cursor-pointer border-2 ${
+                        currentIndex === idx ? 'border-[#7a1313]' : 'border-transparent'
+                      } hover:opacity-90 transition`}
+                    />
+                  ));
+                })()}
               </div>
 
-              {/* Thumbnails */}
-              <div className="flex space-x-2 justify-center mt-2">
-                {previewVenue.hallImages.map((img, idx) => (
-                  <img
-                    key={idx}
-                    src={img}
-                    alt={`Thumbnail ${idx + 1}`}
-                    className={`h-12 w-16 object-cover rounded cursor-pointer border-2 ${currentIndex === idx ? "border-[#7a1313]" : "border-transparent"}`}
-                    onClick={() => setCurrentIndex(idx)}
-                  />
-                ))}
-                <img
-                  src={previewVenue.ownerCitizenship}
-                  alt="Owner Citizenship"
-                  className={`h-12 w-16 object-cover rounded cursor-pointer border-2 ${currentIndex === previewVenue.hallImages.length ? "border-[#7a1313]" : "border-transparent"}`}
-                  onClick={() => setCurrentIndex(previewVenue.hallImages.length)}
-                />
-                <img
-                  src={previewVenue.companyRegistration}
-                  alt="Company Certificate"
-                  className={`h-12 w-16 object-cover rounded cursor-pointer border-2 ${currentIndex === previewVenue.hallImages.length + 1 ? "border-[#7a1313]" : "border-transparent"}`}
-                  onClick={() => setCurrentIndex(previewVenue.hallImages.length + 1)}
-                />
-              </div>
-
-              {/* Modal Buttons */}
+              {/* Action Buttons */}
               <div className="flex justify-end space-x-4 mt-6">
                 <button
                   onClick={closePreviewModal}
@@ -419,6 +479,8 @@ const VenueManagement = () => {
             </div>
           </div>
         )}
+
+
       </div>
     </div>
   );
