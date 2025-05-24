@@ -124,6 +124,10 @@ const createBooking = async (req, res) => {
         return res.status(400).json({ message: "Minimum 100 points required to redeem" });
       }
 
+      if (pointsToRedeem > 10000) {
+        return res.status(400).json({ message: "Maximum 10,000 points can be redeemed at once" });
+      }
+
       if (user.loyaltyPoints < pointsToRedeem) {
         return res.status(400).json({ message: "Insufficient loyalty points" });
       }
@@ -417,9 +421,18 @@ const updateBookingStatus = async (req, res) => {
 const getBookedDates = async (req, res) => {
   try {
     const { venueId } = req.body;
-    const bookings = await Booking.find({ venueId });
-    const bookedDates = bookings.map(booking => booking.date);
-    res.status(200).json(bookedDates);
+
+    // Fetch only approved bookings and select date + eventTime
+    const bookings = await Booking.find({ venueId, status: 'approved' }).select('date eventTime');
+
+    // Format to array of objects with date and eventTime
+    const bookedSlots = bookings.map(booking => ({
+      date: booking.date?.toISOString().split('T')[0], // YYYY-MM-DD
+      eventTime: booking.eventTime
+    }));
+
+    console.log('Server: Found', bookedSlots.length, 'approved bookings with event times for venue:', venueId);
+    res.status(200).json(bookedSlots);
   } catch (error) {
     console.error('Server: Error fetching booked dates:', error);
     res.status(500).json({ success: false, message: error.message });

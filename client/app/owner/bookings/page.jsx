@@ -57,7 +57,7 @@ const OwnerBookings = () => {
         return;
       }
 
-      await axios.patch(`http://localhost:5000/api/bookings/${id}/status`, 
+      await axios.put(`http://localhost:5000/api/bookings/${id}/status`, 
         { status },
         {
           headers: {

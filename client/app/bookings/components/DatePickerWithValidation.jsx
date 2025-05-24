@@ -5,10 +5,13 @@ import axios from 'axios';
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
-const DatePickerWithValidation = ({ venueId, value, onChange, eventTime }) => {
+const DatePickerWithValidation = ({ venueId, value, onChange }) => {
   const [bookedDates, setBookedDates] = useState([]);
+
   useEffect(() => {
-    fetchBookedDates();
+    if (venueId) {
+      fetchBookedDates();
+    }
   }, [venueId]);
 
   const fetchBookedDates = async () => {
@@ -23,9 +26,8 @@ const DatePickerWithValidation = ({ venueId, value, onChange, eventTime }) => {
           },
         }
       );
-      const bookings = response.data.bookings || [];
-      const approvedBookings = bookings.filter(b => b.status === 'approved');
-      setBookedDates(approvedBookings);
+      console.log('Booked dates response:', response.data);
+      setBookedDates(response.data || []);
     } catch (err) {
       console.error('Error fetching booked dates:', err);
     }
@@ -33,35 +35,39 @@ const DatePickerWithValidation = ({ venueId, value, onChange, eventTime }) => {
 
   const formatDate = (date) => {
     if (!date) return '';
-    return date.toISOString().split('T')[0];
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
   };
+
   const isPastDate = (date) => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    const dateCopy = new Date(date);
-    dateCopy.setHours(0, 0, 0, 0);
-    return dateCopy < today;
+    const checkDate = new Date(date);
+    checkDate.setHours(0, 0, 0, 0);
+    return checkDate < today;
   };
 
   const isBooked = (date) => {
-    const dateCopy = new Date(date);
-    const formatted = formatDate(dateCopy);
-    return bookedDates.some(b => {
-      const bookDate = new Date(b.date).toISOString().split('T')[0];
-      return bookDate === formatted && b.eventTime === eventTime;
-    });
+    const formatted = formatDate(date); // strictly local formatted date
+    return bookedDates.some(b => b.date === formatted);
   };
 
   const handleDateChange = (selectedDate) => {
     if (!selectedDate) return;
 
-    if (isPastDate(selectedDate) || selectedDate.toDateString() === new Date().toDateString()) {
+    const today = new Date();
+    if (
+      isPastDate(selectedDate) ||
+      selectedDate.toDateString() === today.toDateString()
+    ) {
       toast.error("You cannot select past or today's date.");
       return;
     }
 
     if (isBooked(selectedDate)) {
-      toast.error(`The ${eventTime} shift is already booked on this date.`);
+      toast.error("This date is fully booked.");
       return;
     }
 
@@ -69,9 +75,11 @@ const DatePickerWithValidation = ({ venueId, value, onChange, eventTime }) => {
   };
 
   const getDayClassName = (date) => {
-    if (isPastDate(new Date(date)) || isBooked(new Date(date))) {
-      return 'red-date';
-    }
+    const formatted = formatDate(date);
+    const isBookedDate = bookedDates.some(b => b.date === formatted);
+
+    if (isPastDate(date)) return 'gray-date';
+    if (isBookedDate) return 'red-date';
     return '';
   };
 
@@ -89,9 +97,16 @@ const DatePickerWithValidation = ({ venueId, value, onChange, eventTime }) => {
       <ToastContainer position="top-right" autoClose={3000} hideProgressBar />
       <style>{`
         .red-date {
-          background-color: #ffe6e6 !important;
-          color: #d32f2f !important;
+          background-color: #ffcccc !important;
+          color: #a70000 !important;
           font-weight: bold;
+          border-radius: 50% !important;
+        }
+
+        .gray-date {
+          background-color: #f0f0f0 !important;
+          color: #999 !important;
+          border-radius: 50% !important;
         }
       `}</style>
     </div>

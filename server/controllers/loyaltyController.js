@@ -6,6 +6,7 @@ const asyncHandler = require('express-async-handler');
 const DAILY_POINTS = 50; // Points earned for daily login
 const POINTS_PER_BOOKING = 100; // Points earned per booking
 const MIN_POINTS_REDEEM = 100; // Minimum points needed to redeem
+const MAX_POINTS_REDEEM = 10000; // Maximum points that can be redeemed at once
 const POINTS_TO_CURRENCY = 0.1; // Each point is worth $0.10
 
 // @desc    Claim daily points
@@ -113,10 +114,13 @@ const redeemPoints = asyncHandler(async (req, res) => {
   }
 
   const { pointsToRedeem } = req.body;
-
   if (!pointsToRedeem || pointsToRedeem < MIN_POINTS_REDEEM) {
     res.status(400);
     throw new Error(`Minimum ${MIN_POINTS_REDEEM} points required to redeem`);
+  }
+    if (pointsToRedeem > MAX_POINTS_REDEEM) {
+    res.status(400);
+    throw new Error(`Maximum ${MAX_POINTS_REDEEM} points can be redeemed at once`);
   }
 
   const user = await User.findById(req.user._id);

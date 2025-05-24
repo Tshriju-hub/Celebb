@@ -1568,13 +1568,12 @@ const UserBooking = () => {
             {showLoyaltySection && (
               
                   
-                  <div className="p-6">
-                    <div className="mb-6">
+                  <div className="p-6">                    <div className="mb-6">
                       <h3 className="text-lg font-semibold mb-2">Venue Advance Payment</h3>
                       <p className="text-2xl font-bold text-[#7a1313]">Rs{advancePayment}</p>
                     </div>
 
-                    {loyaltyPoints >= 100 && (
+                    {loyaltyPoints >= 100 ? (
                       <div className="border-t pt-6">
                         <h3 className="text-lg font-semibold mb-4">Loyalty Points Redemption</h3>
                         <div className="mb-4">
@@ -1585,15 +1584,32 @@ const UserBooking = () => {
                           <input
                             type="number"
                             min="100"
-                            max={loyaltyPoints}
+                            max={Math.min(10000, loyaltyPoints)}
                             value={pointsToRedeem}
-                            onChange={(e) => setPointsToRedeem(Number(e.target.value))}
+                            onChange={(e) => {
+                              const value = Number(e.target.value);
+                              if (value > 10000) {
+                                setPointsToRedeem(10000);
+                                toast.info("Maximum 10,000 points can be redeemed at once");
+                              } else {
+                                setPointsToRedeem(value);
+                              }
+                            }}
                             className="border border-gray-300 rounded-md p-2 w-32"
                             placeholder="Points to redeem"
                           />
                           <p className="text-gray-600">
                             = Rs{pointsToRedeem} discount
                           </p>
+                        </div>
+                        <p className="text-xs text-gray-500 mt-1">Maximum 10,000 points can be redeemed at once</p>
+                      </div>
+                    ) : (
+                      <div className="border-t pt-6">
+                        <h3 className="text-lg font-semibold mb-4">Loyalty Points Redemption</h3>
+                        <div className="mb-4">
+                          <p className="text-gray-600">Available Points: {loyaltyPoints}</p>
+                          <p className="text-sm text-gray-500">You need at least 100 loyalty points to redeem for a discount</p>
                         </div>
                       </div>
                     )}
