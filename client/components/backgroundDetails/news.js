@@ -35,7 +35,7 @@ export default function NewsCarousel() {
   };
 
   if (loading) return <div className="text-center py-10">Loading news...</div>;
-  if (news.length === 0) return <div className="text-center py-10">No news available</div>;
+  if (news.length === 0) return <div className="text-center py-10">No recent news available</div>;
 
   return (
     <div className="bg-[#f5efeb] py-10 px-5 text-center">
@@ -70,11 +70,18 @@ export default function NewsCarousel() {
                 />
               </div>
               <CardContent className="p-4">
-                <h4 className="font-semibold text-gray-800 mb-1">{item.title}</h4>
+                <div className="flex items-center justify-between mb-2">
+                  <h4 className="font-semibold text-gray-800">{item.title}</h4>
+                </div>
                 <p className="text-gray-600 text-sm line-clamp-3">{item.description}</p>
-                <span className="text-xs text-gray-500 block mt-2">
-                  {new Date(item.date).toLocaleDateString()}
-                </span>
+                <div className="mt-3 flex flex-col gap-1">
+                  <span className="text-xs text-[#7a1313] font-semibold">
+                    {item.venueName}
+                  </span>
+                  <span className="text-xs text-gray-500">
+                    {new Date(item.createdAt).toLocaleDateString()}
+                  </span>
+                </div>
               </CardContent>
             </Card>
           ))}
@@ -92,3 +99,4 @@ export default function NewsCarousel() {
     </div>
   );
 }
+

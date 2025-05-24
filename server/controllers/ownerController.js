@@ -1,6 +1,7 @@
 const Registration = require('../models/Registration');
 const cloudinary = require('../lib/cloudinary');
 const stream = require('stream');
+const fetch = require('node-fetch');
 
 // Helper to upload a file buffer to Cloudinary
 const uploadToCloudinary = (fileBuffer, isDocument = false) => {
@@ -11,7 +12,9 @@ const uploadToCloudinary = (fileBuffer, isDocument = false) => {
     const uploadOptions = {
       resource_type: isDocument ? 'raw' : 'auto',
       format: isDocument ? 'pdf' : undefined,
-      folder: isDocument ? 'documents' : 'images'
+      folder: isDocument ? 'documents' : 'images',
+      access_mode: 'public',
+      type: 'upload'
     };
 
     const uploadStream = cloudinary.uploader.upload_stream(
@@ -244,5 +247,33 @@ const banVenue = async (req, res) => {
   }
 };
 
+const getPdfDocument = async (req, res) => {
+  try {
+    const { url } = req.query;
+    if (!url) {
+      return res.status(400).json({ success: false, message: 'URL is required' });
+    }
 
-module.exports = { registerOwner, getVenues ,getVenueDetails, getVenuesforOwner, approveVenue,getVenueAdmin, deleteVenue, banVenue };
+    // Fetch the PDF from Cloudinary
+    const response = await fetch(url);
+    if (!response.ok) {
+      throw new Error('Failed to fetch PDF');
+    }
+
+    // Get the PDF content
+    const pdfBuffer = await response.buffer();
+
+    // Set appropriate headers
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', 'inline');
+    res.setHeader('Access-Control-Allow-Origin', '*');
+
+    // Send the PDF
+    res.send(pdfBuffer);
+  } catch (error) {
+    console.error('Error fetching PDF:', error);
+    res.status(500).json({ success: false, message: 'Failed to fetch PDF' });
+  }
+};
+
+module.exports = { registerOwner, getVenues ,getVenueDetails, getVenuesforOwner, approveVenue,getVenueAdmin, deleteVenue, banVenue, getPdfDocument };

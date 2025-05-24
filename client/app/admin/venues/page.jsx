@@ -4,6 +4,10 @@ import axios from "axios";
 import { toast } from "react-toastify";
 import { CSVLink } from "react-csv";
 import AdminSidebar from "@/components/Sidebar/AdminSidebar";
+import { Viewer, Worker } from '@react-pdf-viewer/core';
+import { defaultLayoutPlugin } from '@react-pdf-viewer/default-layout';
+import '@react-pdf-viewer/core/lib/styles/index.css';
+import '@react-pdf-viewer/default-layout/lib/styles/index.css';
 
 const VenueManagement = () => {
   const [venues, setVenues] = useState([]);
@@ -12,7 +16,15 @@ const VenueManagement = () => {
   const [isPreviewModalOpen, setIsPreviewModalOpen] = useState(false);
   const [previewVenue, setPreviewVenue] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [currentIndex, setCurrentIndex] = useState(0); // Track the index of the current image in the carousel
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [viewMode, setViewMode] = useState('images');
+  const [numPages, setNumPages] = useState(null);
+  const [pageNumber, setPageNumber] = useState(1);
+  const [pdfLoading, setPdfLoading] = useState(true);
+  const [pdfUrl, setPdfUrl] = useState(null);
+
+  // Create the default layout plugin instance inside the component
+  const defaultLayoutPluginInstance = defaultLayoutPlugin();
 
   useEffect(() => {
     const fetchVenues = async () => {
@@ -123,37 +135,132 @@ const VenueManagement = () => {
 
   const openPreviewModal = (venue) => {
     setPreviewVenue(venue);
-    setCurrentIndex(0); // Reset the carousel index
+    setCurrentIndex(0);
+    setViewMode('images');
+    setPageNumber(1);
+    setPdfUrl(null);
     setIsPreviewModalOpen(true);
   };
+
+  useEffect(() => {
+    if (previewVenue && viewMode === 'documents') {
+      console.log('Preview Venue Data:', previewVenue); // Debug log for venue data
+      const url = currentIndex === 0 ? previewVenue.ownerCitizenship[0] : previewVenue.companyRegistration[0];
+      console.log('Raw URL from venue:', url); // Debug log for raw URL
+      
+      if (url && typeof url === 'string') {
+        // Cloudinary URLs are already complete URLs, no need to modify them
+        console.log('Using Cloudinary URL:', url); // Debug log for Cloudinary URL
+        setPdfUrl(url);
+        setPdfLoading(true);
+      } else {
+        console.log('Invalid URL:', url); // Debug log for invalid URL
+        setPdfUrl(null);
+        setPdfLoading(false);
+      }
+    }
+  }, [previewVenue, viewMode, currentIndex]);
 
   const closePreviewModal = () => {
     setIsPreviewModalOpen(false);
     setPreviewVenue(null);
   };
 
-  // Carousel navigation
-  const handlePrev = () => {
-    if (currentIndex === 0) {
-      setCurrentIndex(previewVenue.hallImages.length - 1); // Loop back to the last image
-    } else {
-      setCurrentIndex(currentIndex - 1); // Go to the previous image
-    }
-  };
+  function onDocumentLoadSuccess({ numPages }) {
+    console.log('PDF loaded successfully with', numPages, 'pages'); // Debug log
+    setNumPages(numPages);
+    setPdfLoading(false);
+  }
 
-  const handleNext = () => {
-    if (currentIndex === previewVenue.hallImages.length - 1) {
-      setCurrentIndex(0); // Loop back to the first image
-    } else {
-      setCurrentIndex(currentIndex + 1); // Go to the next image
-    }
-  };
+  function onDocumentLoadError(error) {
+    console.error('Error loading PDF:', error); // Debug log
+    setPdfLoading(false);
+  }
 
   // Summary counts
   const approvedCount = venues.filter((v) => v.status === "approved").length;
   const pendingCount = venues.filter((v) => v.status === "pending").length;
   const rejectedCount = venues.filter((v) => v.status === "rejected").length;
   const bannedCount = venues.filter((v) => v.status === "banned").length;
+
+  // Add this function to check if the URL exists
+  const checkUrlExists = async (url) => {
+    try {
+      const response = await fetch(url, { method: 'HEAD' });
+      return response.ok;
+    } catch (error) {
+      console.error('Error checking URL:', error);
+      return false;
+    }
+  };
+
+  // Update the PDF viewer section
+  const renderPdfViewer = (urls, documentType) => {
+    if (!urls || urls.length === 0) {
+      return <div className="text-gray-500">No {documentType} document available</div>;
+    }
+
+    const cloudinaryUrl = urls[0]; // Get the first URL from the array
+    const proxyUrl = `http://localhost:5000/api/auth/pdf?url=${encodeURIComponent(cloudinaryUrl)}`;
+    console.log('PDF URL:', proxyUrl); // Debug log
+
+    // Function to handle PDF loading errors
+    const handleError = (error) => {
+      console.error('Error loading PDF:', error);
+      return (
+        <div className="flex flex-col items-center justify-center h-full text-red-500">
+          <p>Failed to load PDF</p>
+          <p className="text-sm">Please check if the file is accessible</p>
+          <div className="flex gap-4 mt-4">
+            <button 
+              onClick={() => window.open(cloudinaryUrl, '_blank')}
+              className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+            >
+              Open in New Tab
+            </button>
+            <button 
+              onClick={() => {
+                // Try to fetch the PDF through the proxy
+                fetch(proxyUrl)
+                  .then(response => {
+                    if (response.ok) {
+                      window.open(proxyUrl, '_blank');
+                    } else {
+                      toast.error('Failed to access PDF');
+                    }
+                  })
+                  .catch(error => {
+                    console.error('Error fetching PDF:', error);
+                    toast.error('Failed to access PDF');
+                  });
+              }}
+              className="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600"
+            >
+              Try Alternative Access
+            </button>
+          </div>
+        </div>
+      );
+    };
+
+    return (
+      <div className="w-full h-full overflow-auto">
+        <Worker workerUrl="https://unpkg.com/pdfjs-dist@3.11.174/build/pdf.worker.min.js">
+          <Viewer
+            fileUrl={proxyUrl}
+            plugins={[defaultLayoutPluginInstance]}
+            defaultScale={1}
+            onError={handleError}
+            renderLoader={(percentages) => (
+              <div className="flex items-center justify-center h-full">
+                <div className="animate-spin rounded-full h-12 w-12 border-4 border-[#7a1313] border-t-transparent"></div>
+              </div>
+            )}
+          />
+        </Worker>
+      </div>
+    );
+  };
 
   return (
     <div className="flex min-h-screen">
@@ -463,12 +570,14 @@ const VenueManagement = () => {
                 >
                   Close
                 </button>
-                <button
-                  onClick={() => approveVenue(previewVenue._id)}
-                  className="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-md shadow-md transition-colors"
-                >
-                  Approve
-                </button>
+                {previewVenue.status === "pending" && (
+                  <button
+                    onClick={() => approveVenue(previewVenue._id)}
+                    className="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-md shadow-md transition-colors"
+                  >
+                    Approve
+                  </button>
+                )}
                 <button
                   onClick={() => handleDelete(previewVenue._id)}
                   className="bg-red-600 hover:bg-red-700 text-white px-6 py-2 rounded-md shadow-md transition-colors"

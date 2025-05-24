@@ -12,6 +12,9 @@ router.post('/:id', protect, reviewController.addReview);
 // Like a review
 router.post('/:id/like', protect, reviewController.likeReview);
 
+// Dislike a review
+router.post('/:id/dislike', protect, reviewController.dislikeReview);
+
 // Add reply to a review
 router.post('/:id/reply', protect, reviewController.addReply);
 
