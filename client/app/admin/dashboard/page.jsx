@@ -36,7 +36,36 @@ const AdminDashboard = () => {
         const venuesRes = await axios.get("http://localhost:5000/api/auth/registrations", {
           headers: { Authorization: `Bearer ${session.user.token}` }
         });
+        
+        // Log the venues data for debugging
+        console.log('Fetched venues:', venuesRes.data);
+        
+        // Update venues state
         setVenues(venuesRes.data);
+
+        // Calculate venue statistics with logging
+        const approvedVenues = venuesRes.data.filter(v => v.status === "approved").length;
+        const pendingVenues = venuesRes.data.filter(v => v.status === "pending").length;
+        const rejectedVenues = venuesRes.data.filter(v => v.status === "rejected").length;
+        const bannedVenues = venuesRes.data.filter(v => v.status === "banned").length;
+
+        console.log('Venue status counts:', {
+          approved: approvedVenues,
+          pending: pendingVenues,
+          rejected: rejectedVenues,
+          banned: bannedVenues
+        });
+
+        // Update venue status data with all statuses
+        const venueStatusData = {
+          labels: ['Approved', 'Pending', 'Rejected', 'Banned'],
+          datasets: [{
+            data: [approvedVenues, pendingVenues, rejectedVenues, bannedVenues],
+            backgroundColor: ['#4CAF50', '#FFA726', '#EF5350', '#9E9E9E'],
+            borderColor: ['#388E3C', '#F57C00', '#D32F2F', '#616161'],
+            borderWidth: 1,
+          }]
+        };
 
         // Fetch news using the correct endpoint
         const newsRes = await axios.get("http://localhost:5000/api/news");
@@ -60,21 +89,6 @@ const AdminDashboard = () => {
       fetchData();
     }
   }, [session]);
-
-  // Calculate venue statistics
-  const approvedVenues = venues.filter(v => v.status === "approved").length;
-  const pendingVenues = venues.filter(v => v.status === "pending").length;
-  const rejectedVenues = venues.filter(v => v.status === "rejected").length;
-
-  const venueStatusData = {
-    labels: ['Approved', 'Pending', 'Rejected'],
-    datasets: [{
-      data: [approvedVenues, pendingVenues, rejectedVenues],
-      backgroundColor: ['#4CAF50', '#FFA726', '#EF5350'],
-      borderColor: ['#388E3C', '#F57C00', '#D32F2F'],
-      borderWidth: 1,
-    }]
-  };
 
   const banUser = async (userId) => {
     if (window.confirm("Ban this user?")) {
@@ -151,7 +165,6 @@ const AdminDashboard = () => {
                   <div>
                     <p className="text-sm text-gray-500 mb-1">Total Venues</p>
                     <h3 className="text-2xl font-bold text-gray-800">{venues.length}</h3>
-                    <p className="text-sm text-green-600 mt-1">{approvedVenues} approved</p>
                   </div>
                   <div className="bg-green-100 p-3 rounded-full">
                     <FaBuilding className="w-6 h-6 text-green-600" />

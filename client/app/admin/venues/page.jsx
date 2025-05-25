@@ -27,6 +27,7 @@ const VenueManagement = () => {
   const [isConfirmDialogOpen, setIsConfirmDialogOpen] = useState(false);
   const [confirmAction, setConfirmAction] = useState(null);
   const [selectedVenueId, setSelectedVenueId] = useState(null);
+  const [confirmMessage, setConfirmMessage] = useState('');
 
   // Create the default layout plugin instance inside the component
   const defaultLayoutPluginInstance = defaultLayoutPlugin();
@@ -267,6 +268,34 @@ const VenueManagement = () => {
     );
   };
 
+  const openConfirmDialog = (action, venueId) => {
+    setConfirmAction(action);
+    setSelectedVenueId(venueId);
+    
+    // Set appropriate confirmation message based on action
+    switch (action) {
+      case 'approve':
+        setConfirmMessage('Are you sure you want to approve this venue? This will allow the venue to accept bookings.');
+        break;
+      case 'reject':
+        setConfirmMessage('Are you sure you want to reject this venue? This will permanently suspend the owner\'s account.');
+        break;
+      case 'ban':
+        setConfirmMessage('Are you sure you want to ban this venue? This will prevent the venue from accepting bookings.');
+        break;
+      case 'unban':
+        setConfirmMessage('Are you sure you want to unban this venue? This will restore the venue\'s ability to accept bookings.');
+        break;
+      case 'delete':
+        setConfirmMessage('Are you sure you want to delete this venue? This action cannot be undone.');
+        break;
+      default:
+        setConfirmMessage('Are you sure you want to proceed with this action?');
+    }
+    
+    setIsConfirmDialogOpen(true);
+  };
+
   const handleConfirmAction = async () => {
     try {
       switch (confirmAction) {
@@ -275,6 +304,13 @@ const VenueManagement = () => {
           toast.success("Venue approved successfully");
           setVenues((prev) =>
             prev.map((v) => (v._id === selectedVenueId ? { ...v, status: "approved" } : v))
+          );
+          break;
+        case 'reject':
+          await axios.post(`http://localhost:5000/api/auth/reject-venue`, { id: selectedVenueId });
+          toast.success("Venue rejected successfully");
+          setVenues((prev) =>
+            prev.map((v) => (v._id === selectedVenueId ? { ...v, status: "rejected" } : v))
           );
           break;
         case 'ban':
@@ -299,17 +335,13 @@ const VenueManagement = () => {
       }
     } catch (error) {
       toast.error(`Failed to ${confirmAction} venue`);
+      console.error(error);
     } finally {
       setIsConfirmDialogOpen(false);
       setConfirmAction(null);
       setSelectedVenueId(null);
+      setConfirmMessage('');
     }
-  };
-
-  const openConfirmDialog = (action, venueId) => {
-    setConfirmAction(action);
-    setSelectedVenueId(venueId);
-    setIsConfirmDialogOpen(true);
   };
 
   return (
@@ -419,6 +451,22 @@ const VenueManagement = () => {
 
               {/* Buttons */}
               <div className="flex justify-end space-x-3 mt-6 pt-4 border-t">
+                {venue.status === "pending" && (
+                  <>
+                    <button
+                      onClick={() => openConfirmDialog('approve', venue._id)}
+                      className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-all duration-200"
+                    >
+                      Approve
+                    </button>
+                    <button
+                      onClick={() => openConfirmDialog('reject', venue._id)}
+                      className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-all duration-200"
+                    >
+                      Reject
+                    </button>
+                  </>
+                )}
                 {venue.status === "approved" && (
                   <button
                     onClick={() => openConfirmDialog('ban', venue._id)}
@@ -447,14 +495,6 @@ const VenueManagement = () => {
                 >
                   Preview
                 </button>
-                {venue.status === "pending" && (
-                  <button
-                    onClick={() => openConfirmDialog('approve', venue._id)}
-                    className="px-4 py-2 bg-[#7a1313] text-white rounded-lg hover:bg-[#5a0e0e] transition-all duration-200"
-                  >
-                    Approve
-                  </button>
-                )}
               </div>
             </div>
           ))
@@ -475,7 +515,7 @@ const VenueManagement = () => {
               </Dialog.Title>
               
               <Dialog.Description className="text-sm text-gray-500 mb-6">
-                Are you sure you want to {confirmAction} this venue? This action cannot be undone.
+                {confirmMessage}
               </Dialog.Description>
 
               <div className="flex justify-end space-x-3">
@@ -488,7 +528,7 @@ const VenueManagement = () => {
                 <button
                   onClick={handleConfirmAction}
                   className={`px-4 py-2 text-white rounded-lg transition-all duration-200 ${
-                    confirmAction === 'delete' || confirmAction === 'ban'
+                    confirmAction === 'delete' || confirmAction === 'ban' || confirmAction === 'reject'
                       ? 'bg-red-600 hover:bg-red-700'
                       : confirmAction === 'approve' || confirmAction === 'unban'
                       ? 'bg-green-600 hover:bg-green-700'
@@ -507,9 +547,11 @@ const VenueManagement = () => {
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
             <div className="bg-white p-8 rounded-lg w-[75%] h-[95%] max-w-6xl shadow-xl space-y-6 relative overflow-y-auto">
 
-              {/* Title */}              <h2 className="text-xl font-semibold text-[#7a1313]">
+              {/* Title */}
+              <h2 className="text-xl font-semibold text-[#7a1313]">
                 {(() => {
                   const hallImagesLength = previewVenue.hallImages.length;
+                  const qrCodeIndex = hallImagesLength + 2; // After hall images, citizenship, and registration
                   
                   if (currentIndex < hallImagesLength) {
                     return `Hall Image ${currentIndex + 1}`;
@@ -523,7 +565,7 @@ const VenueManagement = () => {
                       : previewVenue.ownerCitizenship;
                     
                     return `Owner Citizenship ${isPDF(citizenshipFile) ? '(PDF)' : ''}`;
-                  } else {
+                  } else if (currentIndex === hallImagesLength + 1) {
                     const isPDF = (url) => {
                       if (typeof url !== 'string') return false;
                       return /\.pdf($|\?)/i.test(url) || url.includes('/raw/') || url.includes('/documents/');
@@ -533,9 +575,13 @@ const VenueManagement = () => {
                       : previewVenue.companyRegistration;
                     
                     return `Company Certificate ${isPDF(certificateFile) ? '(PDF)' : ''}`;
+                  } else if (currentIndex === qrCodeIndex) {
+                    return 'Donation QR Code';
                   }
                 })()}
-              </h2>{/* Preview Display */}
+              </h2>
+
+              {/* Preview Display */}
               <div className="relative">
                 {(() => {
                   const totalImages = previewVenue.hallImages.length;
@@ -543,6 +589,7 @@ const VenueManagement = () => {
                     ...previewVenue.hallImages,
                     previewVenue.ownerCitizenship,
                     previewVenue.companyRegistration,
+                    previewVenue.qrCode // Add QR code to the files array
                   ].flat(); // Flatten arrays in case they contain arrays of URLs
                   const currentFile = files[currentIndex];
 
@@ -550,6 +597,26 @@ const VenueManagement = () => {
                     if (typeof url !== 'string') return false;
                     return /\.pdf($|\?)/i.test(url) || url.includes('/raw/') || url.includes('/documents/');
                   };
+
+                  // Special handling for QR code display
+                  if (currentIndex === files.length - 1 && previewVenue.qrCode) {
+                    return (
+                      <div className="w-full h-[60vh] flex flex-col items-center justify-center bg-gray-100 rounded-md shadow-lg p-8">
+                        <div className="max-w-md w-full bg-white p-6 rounded-lg shadow-md">
+                          <h3 className="text-lg font-semibold text-gray-800 mb-4 text-center">Donation QR Code</h3>
+                          <div className="flex justify-center mb-4">
+                            <img
+                              src={previewVenue.qrCode}
+                              alt="Venue Donation QR Code"
+                              className="w-64 h-64 object-contain"
+                            />
+                          </div>
+                          <p className="text-sm text-gray-600 text-center mb-2">Scan to donate</p>
+                          <p className="text-xs text-gray-500 text-center">Your support helps us grow</p>
+                        </div>
+                      </div>
+                    );
+                  }
 
                   return isPDF(currentFile) ? (
                     <div className="w-full h-[60vh] flex flex-col items-center justify-center bg-gray-100 rounded-md shadow-lg">
@@ -574,20 +641,23 @@ const VenueManagement = () => {
                         </a>
                       </div>
                     </div>
-                ) : (
-                  <img
+                  ) : (
+                    <img
                       src={currentFile}
                       alt={`Preview ${currentIndex + 1}`}
                       className="w-full h-[60vh] object-cover rounded-md shadow-lg"
                     />
                   );
-                })()}                {/* Navigation Arrows */}
+                })()}
+
+                {/* Navigation Arrows */}
                 <button
                   onClick={() => {
                     const files = [
                       ...previewVenue.hallImages,
                       previewVenue.ownerCitizenship,
-                      previewVenue.companyRegistration
+                      previewVenue.companyRegistration,
+                      previewVenue.qrCode
                     ].flat();
                     const total = files.length;
                     setCurrentIndex((currentIndex - 1 + total) % total);
@@ -602,7 +672,8 @@ const VenueManagement = () => {
                     const files = [
                       ...previewVenue.hallImages,
                       previewVenue.ownerCitizenship,
-                      previewVenue.companyRegistration
+                      previewVenue.companyRegistration,
+                      previewVenue.qrCode
                     ].flat();
                     const total = files.length;
                     setCurrentIndex((currentIndex + 1) % total);
@@ -614,43 +685,63 @@ const VenueManagement = () => {
 
                 {/* Index Indicator */}
                 <div className="absolute bottom-2 right-2 bg-black bg-opacity-60 text-white text-xs px-2 py-1 rounded">
-                  {currentIndex + 1} / {[...previewVenue.hallImages, previewVenue.ownerCitizenship, previewVenue.companyRegistration].flat().length}
+                  {currentIndex + 1} / {[...previewVenue.hallImages, previewVenue.ownerCitizenship, previewVenue.companyRegistration, previewVenue.qrCode].flat().length}
                 </div>
-              </div>              {/* Thumbnails */}
+              </div>
+
+              {/* Thumbnails */}
               <div className="flex flex-wrap gap-2 justify-center mt-2">
                 {(() => {
                   const files = [
                     ...previewVenue.hallImages,
                     previewVenue.ownerCitizenship,
-                    previewVenue.companyRegistration
-                  ].flat(); // Flatten arrays in case they contain arrays of URLs
+                    previewVenue.companyRegistration,
+                    previewVenue.qrCode // Add QR code to thumbnails
+                  ].flat();
                   
                   const isPDF = (url) => {
                     if (typeof url !== 'string') return false;
                     return /\.pdf($|\?)/i.test(url) || url.includes('/raw/') || url.includes('/documents/');
                   };
 
-                  return files.map((file, idx) => isPDF(file) ? (
-                    <div
-                      key={idx}
-                      onClick={() => setCurrentIndex(idx)}
-                      className={`h-12 w-16 flex items-center justify-center bg-gray-200 rounded border-2 ${
-                        currentIndex === idx ? 'border-[#7a1313]' : 'border-transparent'
-                      } cursor-pointer hover:bg-gray-300 transition`}
-                    >
-                      <span className="text-xs text-gray-700 font-medium">PDF</span>
-              </div>
-                  ) : (
-                  <img
-                    key={idx}
-                      src={file}
-                    alt={`Thumbnail ${idx + 1}`}
-                    onClick={() => setCurrentIndex(idx)}
-                      className={`h-12 w-16 object-cover rounded cursor-pointer border-2 ${
-                        currentIndex === idx ? 'border-[#7a1313]' : 'border-transparent'
-                      } hover:opacity-90 transition`}
-                    />
-                  ));
+                  return files.map((file, idx) => {
+                    // Special thumbnail for QR code
+                    if (idx === files.length - 1 && previewVenue.qrCode) {
+                      return (
+                        <div
+                          key={idx}
+                          onClick={() => setCurrentIndex(idx)}
+                          className={`h-12 w-16 flex items-center justify-center bg-gray-200 rounded border-2 ${
+                            currentIndex === idx ? 'border-[#7a1313]' : 'border-transparent'
+                          } cursor-pointer hover:bg-gray-300 transition`}
+                        >
+                          <span className="text-xs text-gray-700 font-medium">QR</span>
+                        </div>
+                      );
+                    }
+
+                    return isPDF(file) ? (
+                      <div
+                        key={idx}
+                        onClick={() => setCurrentIndex(idx)}
+                        className={`h-12 w-16 flex items-center justify-center bg-gray-200 rounded border-2 ${
+                          currentIndex === idx ? 'border-[#7a1313]' : 'border-transparent'
+                        } cursor-pointer hover:bg-gray-300 transition`}
+                      >
+                        <span className="text-xs text-gray-700 font-medium">PDF</span>
+                      </div>
+                    ) : (
+                      <img
+                        key={idx}
+                        src={file}
+                        alt={`Thumbnail ${idx + 1}`}
+                        onClick={() => setCurrentIndex(idx)}
+                        className={`h-12 w-16 object-cover rounded cursor-pointer border-2 ${
+                          currentIndex === idx ? 'border-[#7a1313]' : 'border-transparent'
+                        } hover:opacity-90 transition`}
+                      />
+                    );
+                  });
                 })()}
               </div>
 
