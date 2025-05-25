@@ -1,21 +1,11 @@
 "use client";
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect } from "react";
 import axios from "axios";
 import AdminSidebar from "@/components/Sidebar/AdminSidebar";
-import { FaNewspaper, FaBuilding, FaUsers, FaChartLine, FaCalendarCheck } from 'react-icons/fa';
-import { BsThreeDotsVertical } from "react-icons/bs";
+import { FaNewspaper, FaBuilding, FaUsers } from 'react-icons/fa';
 import { toast } from "react-toastify";
 import Link from "next/link";
 import { useSession } from 'next-auth/react';
-import { Pie } from 'react-chartjs-2';
-import {
-  Chart as ChartJS,
-  ArcElement,
-  Tooltip,
-  Legend
-} from 'chart.js';
-
-ChartJS.register(ArcElement, Tooltip, Legend);
 
 const AdminDashboard = () => {
   const [loading, setLoading] = useState(true);
@@ -32,49 +22,24 @@ const AdminDashboard = () => {
           return;
         }
 
-        // Fetch venues using the correct endpoint
+        // Fetch venues
         const venuesRes = await axios.get("http://localhost:5000/api/auth/registrations", {
           headers: { Authorization: `Bearer ${session.user.token}` }
         });
-        
-        // Log the venues data for debugging
-        console.log('Fetched venues:', venuesRes.data);
-        
-        // Update venues state
+        console.log('Fetched venues:', venuesRes.data); // Debug log
         setVenues(venuesRes.data);
 
-        // Calculate venue statistics with logging
-        const approvedVenues = venuesRes.data.filter(v => v.status === "approved").length;
-        const pendingVenues = venuesRes.data.filter(v => v.status === "pending").length;
-        const rejectedVenues = venuesRes.data.filter(v => v.status === "rejected").length;
-        const bannedVenues = venuesRes.data.filter(v => v.status === "banned").length;
-
-        console.log('Venue status counts:', {
-          approved: approvedVenues,
-          pending: pendingVenues,
-          rejected: rejectedVenues,
-          banned: bannedVenues
-        });
-
-        // Update venue status data with all statuses
-        const venueStatusData = {
-          labels: ['Approved', 'Pending', 'Rejected', 'Banned'],
-          datasets: [{
-            data: [approvedVenues, pendingVenues, rejectedVenues, bannedVenues],
-            backgroundColor: ['#4CAF50', '#FFA726', '#EF5350', '#9E9E9E'],
-            borderColor: ['#388E3C', '#F57C00', '#D32F2F', '#616161'],
-            borderWidth: 1,
-          }]
-        };
-
-        // Fetch news using the correct endpoint
+        // Fetch news
         const newsRes = await axios.get("http://localhost:5000/api/news");
         setNews(newsRes.data);
 
-        // Fetch users using the correct endpoint
-        const usersRes = await axios.get("http://localhost:5000/api/user/getallusers", {
-          headers: { Authorization: `Bearer ${session.user.token}` }
+        // Fetch users with proper endpoint and auth
+        const usersRes = await axios.get("http://localhost:5000/api/users/getallusers", {
+          headers: {
+            Authorization: `Bearer ${session.user.token}`
+          }
         });
+        console.log('Fetched users in dashboard:', usersRes.data); // Debug log
         setUsers(usersRes.data);
 
       } catch (error) {
@@ -120,10 +85,6 @@ const AdminDashboard = () => {
     }
   };
 
-  const toggleMenu = (userId) => {
-    setMenuOpenId((prev) => (prev === userId ? null : userId));
-  };
-
   return (
     <div className="flex min-h-screen bg-gray-50">
       <AdminSidebar />
@@ -141,86 +102,19 @@ const AdminDashboard = () => {
           <>
             {/* Stats Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-              {/* Total Users */}
-              <div className="bg-white p-6 rounded-xl shadow-sm hover:shadow-md transition-shadow">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-gray-500 mb-1">Total Users</p>
-                    <h3 className="text-2xl font-bold text-gray-800">{users.length}</h3>
-                  </div>
-                  <div className="bg-blue-100 p-3 rounded-full">
-                    <FaUsers className="w-6 h-6 text-blue-600" />
-                  </div>
-                </div>
-                <div className="mt-4">
-                  <Link href="/admin/users" className="text-sm text-blue-600 hover:text-blue-800">
-                    View all users →
-                  </Link>
-                </div>
-              </div>
-
-              {/* Total Venues */}
-              <div className="bg-white p-6 rounded-xl shadow-sm hover:shadow-md transition-shadow">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-gray-500 mb-1">Total Venues</p>
-                    <h3 className="text-2xl font-bold text-gray-800">{venues.length}</h3>
-                  </div>
-                  <div className="bg-green-100 p-3 rounded-full">
-                    <FaBuilding className="w-6 h-6 text-green-600" />
-                  </div>
-                </div>
-                <div className="mt-4">
-                  <Link href="/admin/venues" className="text-sm text-green-600 hover:text-green-800">
-                    View all venues →
-                  </Link>
-                </div>
-              </div>
-
-              {/* Total News */}
-              <div className="bg-white p-6 rounded-xl shadow-sm hover:shadow-md transition-shadow">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-gray-500 mb-1">Total News</p>
-                    <h3 className="text-2xl font-bold text-gray-800">{news.length}</h3>
-                  </div>
-                  <div className="bg-purple-100 p-3 rounded-full">
-                    <FaNewspaper className="w-6 h-6 text-purple-600" />
-                  </div>
-                </div>
-                <div className="mt-4">
-                  <Link href="/admin/news" className="text-sm text-purple-600 hover:text-purple-800">
-                    View all news →
-                  </Link>
-                </div>
-              </div>
-            </div>
-
-            {/* Venue Status Distribution */}
-            <div className="bg-white rounded-xl shadow-sm p-6 mb-8">
-              <h2 className="text-xl font-semibold text-gray-800 mb-6">Venue Status Distribution</h2>
-              <div className="h-64 flex justify-center">
-                <div className="w-1/2">
-                  <Pie data={venueStatusData} options={{
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                      legend: {
-                        position: 'bottom'
-                      }
-                    }
-                  }} />
-                </div>
-              </div>
+              {/* Users */}
+              <DashboardStat title="Total Users" count={users.length} icon={<FaUsers className="w-6 h-6 text-blue-600" />} color="blue" href="/admin/users" />
+              {/* Venues */}
+              <DashboardStat title="Total Venues" count={venues.length} icon={<FaBuilding className="w-6 h-6 text-green-600" />} color="green" href="/admin/venues" />
+              {/* News */}
+              <DashboardStat title="Total News" count={news.length} icon={<FaNewspaper className="w-6 h-6 text-purple-600" />} color="purple" href="/admin/news" />
             </div>
 
             {/* Recent Venues */}
             <div className="bg-white rounded-xl shadow-sm p-6">
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-xl font-semibold text-gray-800">Recent Venue Requests</h2>
-                <Link href="/admin/venues" className="text-sm text-[#7a1313] hover:text-[#5a0e0e]">
-                  View all
-                </Link>
+                <Link href="/admin/venues" className="text-sm text-[#7a1313] hover:text-[#5a0e0e]">View all</Link>
               </div>
               <div className="space-y-4">
                 {venues.slice(0, 5).map((venue) => (
@@ -229,17 +123,15 @@ const AdminDashboard = () => {
                       <p className="font-medium text-gray-800">{venue.name}</p>
                       <p className="text-sm text-gray-500">{venue.ownerName}</p>
                     </div>
-                    <div className="flex items-center gap-4">
-                      <span className={`px-3 py-1 rounded-full text-sm font-medium ${
-                        venue.status === "approved"
-                          ? "bg-green-100 text-green-700"
-                          : venue.status === "pending"
-                          ? "bg-yellow-100 text-yellow-700"
-                          : "bg-red-100 text-red-700"
-                      }`}>
-                        {venue.status}
-                      </span>
-                    </div>
+                    <span className={`px-3 py-1 rounded-full text-sm font-medium ${
+                      venue.status === "approved"
+                        ? "bg-green-100 text-green-700"
+                        : venue.status === "pending"
+                        ? "bg-yellow-100 text-yellow-700"
+                        : "bg-red-100 text-red-700"
+                    }`}>
+                      {venue.status}
+                    </span>
                   </div>
                 ))}
               </div>
@@ -250,5 +142,24 @@ const AdminDashboard = () => {
     </div>
   );
 };
+
+const DashboardStat = ({ title, count, icon, color, href }) => (
+  <div className="bg-white p-6 rounded-xl shadow-sm hover:shadow-md transition-shadow">
+    <div className="flex items-center justify-between">
+      <div>
+        <p className="text-sm text-gray-500 mb-1">{title}</p>
+        <h3 className="text-2xl font-bold text-gray-800">{count}</h3>
+      </div>
+      <div className={`bg-${color}-100 p-3 rounded-full`}>
+        {icon}
+      </div>
+    </div>
+    <div className="mt-4">
+      <Link href={href} className={`text-sm text-${color}-600 hover:text-${color}-800`}>
+        View all {title.toLowerCase()} →
+      </Link>
+    </div>
+  </div>
+);
 
 export default AdminDashboard;

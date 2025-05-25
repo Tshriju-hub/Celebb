@@ -4,6 +4,7 @@ import AdminSidebar from "@/components/Sidebar/AdminSidebar";
 import { FaUser, FaSearch, FaFilter, FaEllipsisV, FaCheck, FaTimes, FaBan, FaUnlock } from 'react-icons/fa';
 import axios from 'axios';
 import { toast } from 'react-toastify';
+import { useSession } from 'next-auth/react';
 
 const UsersPage = () => {
   const [users, setUsers] = useState([]);
@@ -11,14 +12,22 @@ const UsersPage = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filter, setFilter] = useState('all');
   const [selectedUser, setSelectedUser] = useState(null);
+  const { data: session } = useSession();
 
   useEffect(() => {
-    fetchUsers();
-  }, []);
+    if (session?.user?.token) {
+      fetchUsers();
+    }
+  }, [session]);
 
   const fetchUsers = async () => {
     try {
-      const response = await axios.get('http://localhost:5000/api/user/getallusers');
+      const response = await axios.get('http://localhost:5000/api/users/getallusers', {
+        headers: {
+          Authorization: `Bearer ${session.user.token}`
+        }
+      });
+      console.log('Fetched users:', response.data); // Debug log
       setUsers(response.data);
     } catch (error) {
       console.error('Failed to fetch users:', error);
@@ -30,7 +39,14 @@ const UsersPage = () => {
 
   const handleApprove = async (userId) => {
     try {
-      await axios.post('http://localhost:5000/api/auth/approve-user', { userId });
+      await axios.post('http://localhost:5000/api/auth/approve-user', 
+        { userId },
+        {
+          headers: {
+            Authorization: `Bearer ${session.user.token}`
+          }
+        }
+      );
       toast.success('User approved successfully');
       fetchUsers();
     } catch (error) {
@@ -41,7 +57,14 @@ const UsersPage = () => {
 
   const handleReject = async (userId) => {
     try {
-      await axios.post('http://localhost:5000/api/auth/reject-user', { userId });
+      await axios.post('http://localhost:5000/api/auth/reject-user', 
+        { userId },
+        {
+          headers: {
+            Authorization: `Bearer ${session.user.token}`
+          }
+        }
+      );
       toast.success('User rejected successfully');
       fetchUsers();
     } catch (error) {
@@ -52,7 +75,14 @@ const UsersPage = () => {
 
   const handleBan = async (userId) => {
     try {
-      await axios.post('http://localhost:5000/api/auth/ban-user', { userId });
+      await axios.post('http://localhost:5000/api/auth/ban-user', 
+        { userId },
+        {
+          headers: {
+            Authorization: `Bearer ${session.user.token}`
+          }
+        }
+      );
       toast.success('User banned successfully');
       fetchUsers();
     } catch (error) {
@@ -63,7 +93,14 @@ const UsersPage = () => {
 
   const handleUnban = async (userId) => {
     try {
-      await axios.post('http://localhost:5000/api/auth/approve-user', { userId });
+      await axios.post('http://localhost:5000/api/auth/approve-user', 
+        { userId },
+        {
+          headers: {
+            Authorization: `Bearer ${session.user.token}`
+          }
+        }
+      );
       toast.success('User unbanned successfully');
       fetchUsers();
     } catch (error) {

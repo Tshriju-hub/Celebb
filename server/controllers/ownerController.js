@@ -211,14 +211,17 @@ const approveVenue = async (req, res) => {
 
 const deleteVenue = async (req, res) => {
   try {
-    const { id } = req.params; // Get the ID from the request parameters
+    const { id } = req.body; // Changed from req.params to req.body
+    console.log('Deleting venue with ID:', id); // Add debug log
     const venue = await Registration.findById(id); // Fetch the venue from the database
 
     if (!venue) {
+      console.log('Venue not found with ID:', id); // Add debug log
       return res.status(404).json({ success: false, message: 'Venue not found' });
     }
 
     await Registration.deleteOne({ _id: id }); // Delete the venue from the database
+    console.log('Venue deleted successfully:', id); // Add debug log
 
     res.status(200).json({ success: true, message: 'Venue deleted successfully' });
   } catch (error) {
