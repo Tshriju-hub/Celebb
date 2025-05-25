@@ -12,6 +12,8 @@ const OwnerBookings = () => {
   const [declinedBookings, setDeclinedBookings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("pending");
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+  const [selectedAction, setSelectedAction] = useState({ id: null, status: null });
 
   const fetchBookings = async () => {
     try {
@@ -49,7 +51,12 @@ const OwnerBookings = () => {
     }
   }, [session]);
 
-  const updateStatus = async (id, status) => {
+  const handleStatusUpdate = (id, status) => {
+    setSelectedAction({ id, status });
+    setShowConfirmDialog(true);
+  };
+
+  const confirmStatusUpdate = async () => {
     try {
       if (!session?.user?.token) {
         console.error('No session token found');
@@ -57,25 +64,35 @@ const OwnerBookings = () => {
         return;
       }
 
-      await axios.put(`http://localhost:5000/api/bookings/${id}/status`, 
-        { status },
+      const response = await axios.put(
+        `http://localhost:5000/api/bookings/${selectedAction.id}`, 
+        { status: selectedAction.status },
         {
           headers: {
-            Authorization: `Bearer ${session.user.token}`
+            'Authorization': `Bearer ${session.user.token}`,
+            'Content-Type': 'application/json'
           }
         }
       );
 
-      setPendingBookings((prev) => prev.filter((b) => b._id !== id));
+      if (response.data.success) {
+        setPendingBookings((prev) => prev.filter((b) => b._id !== selectedAction.id));
+        const updatedBooking = response.data.booking;
 
-      if (status === "approved") {
-        setApprovedBookings((prev) => [...prev, pendingBookings.find((b) => b._id === id)]);
-      } else if (status === "declined") {
-        setDeclinedBookings((prev) => [...prev, pendingBookings.find((b) => b._id === id)]);
+        if (selectedAction.status === "approved") {
+          setApprovedBookings((prev) => [...prev, updatedBooking]);
+        } else if (selectedAction.status === "declined") {
+          setDeclinedBookings((prev) => [...prev, updatedBooking]);
+        }
+
+        toast.success(`Booking ${selectedAction.status} successfully`);
       }
     } catch (err) {
       console.error("Error updating status:", err.response?.data || err.message);
-      toast.error("Failed to update booking status");
+      toast.error(err.response?.data?.message || "Failed to update booking status");
+    } finally {
+      setShowConfirmDialog(false);
+      setSelectedAction({ id: null, status: null });
     }
   };
 
@@ -140,13 +157,13 @@ const OwnerBookings = () => {
       {showActions && (
         <div className="mt-4 flex space-x-4">
           <button
-            onClick={() => updateStatus(booking._id, "approved")}
+            onClick={() => handleStatusUpdate(booking._id, "approved")}
             className="px-6 py-2 bg-[#7a1313] text-white rounded-md hover:bg-[#6d0e0e]"
           >
             Approve
           </button>
           <button
-            onClick={() => updateStatus(booking._id, "declined")}
+            onClick={() => handleStatusUpdate(booking._id, "declined")}
             className="px-6 py-2 bg-gray-400 text-white rounded-md hover:bg-gray-500"
           >
             Reject
@@ -197,6 +214,42 @@ const OwnerBookings = () => {
           renderTab(approvedBookings, false, "No approved bookings found.")
         ) : (
           renderTab(declinedBookings, false, "No declined bookings found.")
+        )}
+
+        {/* Confirmation Dialog */}
+        {showConfirmDialog && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white p-6 rounded-lg shadow-xl max-w-md w-full mx-4">
+              <h3 className="text-xl font-semibold text-[#7a1313] mb-4">
+                Confirm {selectedAction.status === "approved" ? "Approval" : "Rejection"}
+              </h3>
+              <p className="text-gray-600 mb-6">
+                Are you sure you want to {selectedAction.status === "approved" ? "approve" : "reject"} this booking?
+                This action cannot be undone.
+              </p>
+              <div className="flex justify-end space-x-4">
+                <button
+                  onClick={() => {
+                    setShowConfirmDialog(false);
+                    setSelectedAction({ id: null, status: null });
+                  }}
+                  className="px-4 py-2 text-gray-600 hover:text-gray-800"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={confirmStatusUpdate}
+                  className={`px-4 py-2 rounded-md text-white ${
+                    selectedAction.status === "approved"
+                      ? "bg-[#7a1313] hover:bg-[#6d0e0e]"
+                      : "bg-gray-500 hover:bg-gray-600"
+                  }`}
+                >
+                  Confirm {selectedAction.status === "approved" ? "Approve" : "Reject"}
+                </button>
+              </div>
+            </div>
+          </div>
         )}
       </div>
     </div>

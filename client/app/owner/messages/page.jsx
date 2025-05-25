@@ -6,6 +6,7 @@ import { BsSendFill } from "react-icons/bs";
 import { SlOptionsVertical } from "react-icons/sl";
 import { FaVideo } from "react-icons/fa";
 import { RiCalendarScheduleFill } from "react-icons/ri";
+import OwnerSidebar from "@/components/Sidebar/OwnerSidebar";
 
 import useConversation from "@/hooks/useConversation";
 import useGetOwnerConversations from "@/hooks/useGetOwnerConversations";
@@ -77,29 +78,32 @@ const Messages = ({ openProfile, openVideoCall }) => {
   }
 
   return (
-    <div className="w-full h-[87vh] mt-[13vh] flex px-2 gap-2">
-      <Sidebar
-        conversations={filteredConversations}
-        selectedConversation={selectedConversation}
-        onUserClick={setSelectedConversation}
-        searchQuery={searchQuery}
-        onSearchChange={(e) => setSearchQuery(e.target.value)}
-      />
-      <ChatBox
-        selectedConversation={selectedConversation}
-        messages={messages}
-        message={message}
-        setMessage={setMessage}
-        handleSend={handleSend}
-        handleKeyDown={handleKeyDown}
-        authUser={authUser}
-        formatTimestamp={formatTimestamp}
-        isModalOpen={isModalOpen}
-        setModalOpen={setModalOpen}
-        openVideoCall={openVideoCall}
-        open={openProfile}
-        isTyping={isTyping}
-      />
+    <div className="flex h-screen">
+      <OwnerSidebar />
+      <div className="flex-1 flex px-2 gap-2">
+        <Sidebar
+          conversations={filteredConversations}
+          selectedConversation={selectedConversation}
+          onUserClick={setSelectedConversation}
+          searchQuery={searchQuery}
+          onSearchChange={(e) => setSearchQuery(e.target.value)}
+        />
+        <ChatBox
+          selectedConversation={selectedConversation}
+          messages={messages}
+          message={message}
+          setMessage={setMessage}
+          handleSend={handleSend}
+          handleKeyDown={handleKeyDown}
+          authUser={authUser}
+          formatTimestamp={formatTimestamp}
+          isModalOpen={isModalOpen}
+          setModalOpen={setModalOpen}
+          openVideoCall={openVideoCall}
+          open={openProfile}
+          isTyping={isTyping}
+        />
+      </div>
     </div>
   );
 };

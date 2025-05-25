@@ -24,7 +24,7 @@ router.get("/", protect, getBookings);
 // GET /api/bookings/owner/:ownerId - Get bookings by owner
 router.get("/owner/:ownerId", protect, getOwnerBookings);
 
-// PATCH /api/bookings/:bookingId/status - Update booking status
-router.patch("/:bookingId/status", protect, updateBookingStatus);
+// PUT /api/bookings/:bookingId - Update booking status
+router.put("/:bookingId", protect, updateBookingStatus);
 
 module.exports = router;

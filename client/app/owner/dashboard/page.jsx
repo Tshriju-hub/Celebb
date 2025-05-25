@@ -6,6 +6,7 @@ import { useSession } from "next-auth/react";
 import VenueDetails from "./components/VenueDetails";
 import BookingStats from "./components/BookingStats";
 import ErrorDisplay from "./components/ErrorDisplay";
+import { FaExclamationTriangle } from "react-icons/fa";
 
 export default function OwnerDashboard() {
   const [venues, setVenues] = useState([]);
@@ -50,30 +51,38 @@ export default function OwnerDashboard() {
       console.log("Venue Response:", venueRes.data);
       setVenues(venueRes.data);
 
-      // Fetch Bookings and Count by Status
-      const bookingsRes = await axios.get(
-        "http://localhost:5000/api/bookings",
-        {
-          headers: {
-            Authorization: `Bearer ${token}`
+      // Check if venue is rejected
+      if (venueRes.data.length > 0 && venueRes.data[0].status === 'rejected') {
+        localStorage.removeItem('token');
+        window.location.href = '/login?error=venue_rejected';
+        return;
+      }
+
+      // Only fetch bookings if venue is approved
+      if (venueRes.data.length > 0 && venueRes.data[0].status === 'approved') {
+        const bookingsRes = await axios.get(
+          "http://localhost:5000/api/bookings",
+          {
+            headers: {
+              Authorization: `Bearer ${token}`
+            }
           }
-        }
-      );
-      console.log("Bookings Response:", bookingsRes.data);
-      const bookings = bookingsRes.data.bookings || [];
+        );
+        console.log("Bookings Response:", bookingsRes.data);
+        const bookings = bookingsRes.data.bookings || [];
 
-      const counts = {
-        approved: bookings.filter(b => b.status === "approved").length,
-        declined: bookings.filter(b => b.status === "declined").length,
-        pending: bookings.filter(b => b.status === "pending").length,
-      };
+        const counts = {
+          approved: bookings.filter(b => b.status === "approved").length,
+          declined: bookings.filter(b => b.status === "declined").length,
+          pending: bookings.filter(b => b.status === "pending").length,
+        };
 
-      console.log("Booking counts:", counts);
-      setBookingCounts(counts);
+        console.log("Booking counts:", counts);
+        setBookingCounts(counts);
+      }
     } catch (err) {
       console.error("Dashboard data fetch error:", err.response?.data || err.message);
       if (err.response?.status === 401) {
-        // Token expired or invalid
         localStorage.removeItem('token');
         window.location.href = '/login';
       } else {
@@ -88,6 +97,8 @@ export default function OwnerDashboard() {
     return <p className="p-8 text-lg text-gray-600">Loading session...</p>;
   }
 
+  const isVenuePending = venues.length > 0 && venues[0].status === 'pending';
+
   return (
     <div className="flex min-h-screen bg-gray-50">
       <OwnerSidebar />
@@ -96,6 +107,25 @@ export default function OwnerDashboard() {
         <h1 className="text-3xl font-bold text-gray-800 mb-8">Owner Dashboard</h1>
 
         <ErrorDisplay error={error} />
+
+        {isVenuePending && (
+          <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 rounded-lg mb-8">
+            <div className="flex items-start">
+              <FaExclamationTriangle className="text-yellow-400 mt-1 mr-3 flex-shrink-0" />
+              <div>
+                <h3 className="text-lg font-semibold text-yellow-800 mb-2">Venue Verification Pending</h3>
+                <p className="text-yellow-700">
+                  Your venue registration is currently under review. This process typically takes up to 72 hours. 
+                  During this time, you will only have access to the dashboard. Once your venue is verified, 
+                  you'll have access to all features including bookings, messages, and services.
+                </p>
+                <p className="text-yellow-700 mt-2 font-medium">
+                  Note: If your venue registration is rejected, your account will be permanently suspended.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Render All Venues */}
         {loading ? (
@@ -108,7 +138,7 @@ export default function OwnerDashboard() {
           <p>No venue details available</p>
         )}
 
-        <BookingStats bookingCounts={bookingCounts} />
+        {!isVenuePending && <BookingStats bookingCounts={bookingCounts} />}
       </main>
     </div>
   );

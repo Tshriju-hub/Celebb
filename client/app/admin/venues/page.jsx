@@ -7,6 +7,7 @@ import { CSVLink } from "react-csv";
 import AdminSidebar from "@/components/Sidebar/AdminSidebar";
 import { Viewer, Worker } from '@react-pdf-viewer/core';
 import { defaultLayoutPlugin } from '@react-pdf-viewer/default-layout';
+import { Dialog } from '@headlessui/react';
 import '@react-pdf-viewer/core/lib/styles/index.css';
 import '@react-pdf-viewer/default-layout/lib/styles/index.css';
 
@@ -23,6 +24,9 @@ const VenueManagement = () => {
   const [pageNumber, setPageNumber] = useState(1);
   const [pdfLoading, setPdfLoading] = useState(true);
   const [pdfUrl, setPdfUrl] = useState(null);
+  const [isConfirmDialogOpen, setIsConfirmDialogOpen] = useState(false);
+  const [confirmAction, setConfirmAction] = useState(null);
+  const [selectedVenueId, setSelectedVenueId] = useState(null);
 
   // Create the default layout plugin instance inside the component
   const defaultLayoutPluginInstance = defaultLayoutPlugin();
@@ -263,6 +267,51 @@ const VenueManagement = () => {
     );
   };
 
+  const handleConfirmAction = async () => {
+    try {
+      switch (confirmAction) {
+        case 'approve':
+          await axios.post(`http://localhost:5000/api/auth/approve-venue`, { id: selectedVenueId });
+          toast.success("Venue approved successfully");
+          setVenues((prev) =>
+            prev.map((v) => (v._id === selectedVenueId ? { ...v, status: "approved" } : v))
+          );
+          break;
+        case 'ban':
+          await axios.post(`http://localhost:5000/api/auth/ban-venue`, { id: selectedVenueId });
+          toast.success("Venue banned successfully");
+          setVenues((prev) => 
+            prev.map((v) => (v._id === selectedVenueId ? { ...v, status: "banned" } : v))
+          );
+          break;
+        case 'unban':
+          await axios.post(`http://localhost:5000/api/auth/approve-venue`, { id: selectedVenueId });
+          toast.success("Venue unbanned successfully");
+          setVenues((prev) =>
+            prev.map((v) => (v._id === selectedVenueId ? { ...v, status: "approved" } : v))
+          );
+          break;
+        case 'delete':
+          await axios.post(`http://localhost:5000/api/auth/delete-venue`, { id: selectedVenueId });
+          toast.success("Venue deleted successfully");
+          setVenues((prev) => prev.filter((v) => v._id !== selectedVenueId));
+          break;
+      }
+    } catch (error) {
+      toast.error(`Failed to ${confirmAction} venue`);
+    } finally {
+      setIsConfirmDialogOpen(false);
+      setConfirmAction(null);
+      setSelectedVenueId(null);
+    }
+  };
+
+  const openConfirmDialog = (action, venueId) => {
+    setConfirmAction(action);
+    setSelectedVenueId(venueId);
+    setIsConfirmDialogOpen(true);
+  };
+
   return (
     <div className="flex min-h-screen">
       <AdminSidebar />
@@ -372,7 +421,7 @@ const VenueManagement = () => {
               <div className="flex justify-end space-x-3 mt-6 pt-4 border-t">
                 {venue.status === "approved" && (
                   <button
-                    onClick={() => banVenue(venue._id)}
+                    onClick={() => openConfirmDialog('ban', venue._id)}
                     className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-all duration-200"
                   >
                     Ban
@@ -380,14 +429,14 @@ const VenueManagement = () => {
                 )}
                 {venue.status === "banned" && (
                   <button
-                    onClick={() => unbanVenue(venue._id)}
+                    onClick={() => openConfirmDialog('unban', venue._id)}
                     className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-all duration-200"
                   >
                     Unban
                   </button>
                 )}
                 <button
-                  onClick={() => handleDelete(venue._id)}
+                  onClick={() => openConfirmDialog('delete', venue._id)}
                   className="px-4 py-2 text-red-600 border border-red-200 rounded-lg hover:bg-red-50 transition-all duration-200"
                 >
                   Delete
@@ -400,7 +449,7 @@ const VenueManagement = () => {
                 </button>
                 {venue.status === "pending" && (
                   <button
-                    onClick={() => approveVenue(venue._id)}
+                    onClick={() => openConfirmDialog('approve', venue._id)}
                     className="px-4 py-2 bg-[#7a1313] text-white rounded-lg hover:bg-[#5a0e0e] transition-all duration-200"
                   >
                     Approve
@@ -410,6 +459,48 @@ const VenueManagement = () => {
             </div>
           ))
         )}
+
+        {/* Confirmation Dialog */}
+        <Dialog
+          open={isConfirmDialogOpen}
+          onClose={() => setIsConfirmDialogOpen(false)}
+          className="relative z-50"
+        >
+          <div className="fixed inset-0 bg-black/30" aria-hidden="true" />
+          
+          <div className="fixed inset-0 flex items-center justify-center p-4">
+            <Dialog.Panel className="mx-auto max-w-sm rounded-lg bg-white p-6 shadow-xl">
+              <Dialog.Title className="text-lg font-medium text-gray-900 mb-4">
+                Confirm Action
+              </Dialog.Title>
+              
+              <Dialog.Description className="text-sm text-gray-500 mb-6">
+                Are you sure you want to {confirmAction} this venue? This action cannot be undone.
+              </Dialog.Description>
+
+              <div className="flex justify-end space-x-3">
+                <button
+                  onClick={() => setIsConfirmDialogOpen(false)}
+                  className="px-4 py-2 text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-50 transition-all duration-200"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleConfirmAction}
+                  className={`px-4 py-2 text-white rounded-lg transition-all duration-200 ${
+                    confirmAction === 'delete' || confirmAction === 'ban'
+                      ? 'bg-red-600 hover:bg-red-700'
+                      : confirmAction === 'approve' || confirmAction === 'unban'
+                      ? 'bg-green-600 hover:bg-green-700'
+                      : 'bg-[#7a1313] hover:bg-[#5a0e0e]'
+                  }`}
+                >
+                  Confirm
+                </button>
+              </div>
+            </Dialog.Panel>
+          </div>
+        </Dialog>
 
         {/* Preview Modal */}
         {isPreviewModalOpen && previewVenue && (
@@ -483,8 +574,8 @@ const VenueManagement = () => {
                         </a>
                       </div>
                     </div>
-                  ) : (
-                    <img
+                ) : (
+                  <img
                       src={currentFile}
                       alt={`Preview ${currentIndex + 1}`}
                       className="w-full h-[60vh] object-cover rounded-md shadow-lg"
@@ -548,13 +639,13 @@ const VenueManagement = () => {
                       } cursor-pointer hover:bg-gray-300 transition`}
                     >
                       <span className="text-xs text-gray-700 font-medium">PDF</span>
-                    </div>
+              </div>
                   ) : (
-                    <img
-                      key={idx}
+                  <img
+                    key={idx}
                       src={file}
-                      alt={`Thumbnail ${idx + 1}`}
-                      onClick={() => setCurrentIndex(idx)}
+                    alt={`Thumbnail ${idx + 1}`}
+                    onClick={() => setCurrentIndex(idx)}
                       className={`h-12 w-16 object-cover rounded cursor-pointer border-2 ${
                         currentIndex === idx ? 'border-[#7a1313]' : 'border-transparent'
                       } hover:opacity-90 transition`}
@@ -572,12 +663,12 @@ const VenueManagement = () => {
                   Close
                 </button>
                 {previewVenue.status === "pending" && (
-                  <button
-                    onClick={() => approveVenue(previewVenue._id)}
-                    className="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-md shadow-md transition-colors"
-                  >
-                    Approve
-                  </button>
+                <button
+                  onClick={() => approveVenue(previewVenue._id)}
+                  className="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-md shadow-md transition-colors"
+                >
+                  Approve
+                </button>
                 )}
                 <button
                   onClick={() => handleDelete(previewVenue._id)}

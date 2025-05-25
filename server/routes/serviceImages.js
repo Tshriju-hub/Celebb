@@ -27,13 +27,11 @@ router.use((req, res, next) => {
   next();
 });
 
-// Get service images by category
-router.get('/', protect, getServiceImages);
+// Public route for getting images
+router.get('/', getServiceImages);
 
-// Upload new service image
+// Protected routes for managing images
 router.post('/', protect, upload.single('image'), uploadServiceImage);
-
-// Delete service image
 router.delete('/:id', protect, deleteServiceImage);
 
 module.exports = router; 

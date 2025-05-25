@@ -159,15 +159,14 @@ const getVenuesforOwner = async (req, res) => {
   const {ownerId} = req.body; // Get the ownerId from the request body
   console.log('Owner ID:', ownerId); // Log the ownerId for debugging
   try {
-    const registrations = await Registration.find(); // Fetch all registrations
-    const filteredRegistrations = registrations.filter
-      (registration => registration.owner.toString() === ownerId); // Filter registrations by ownerId
+    const registrations = await Registration.find({ owner: ownerId }); // Fetch registrations for this owner
     
-    if (filteredRegistrations.length === 0) {
+    if (registrations.length === 0) {
       return res.status(404).json({ success: false, message: 'No registrations found for this owner' });
     }
     
-    res.status(200).json(filteredRegistrations); // Return the filtered registrations as a JSON response
+    console.log('Found registrations:', registrations); // Log the found registrations
+    res.status(200).json(registrations); // Return the registrations as a JSON response
   } catch (error) {
     console.error('Error fetching registrations:', error);
     res.status(500).json({ success: false, message: 'Failed to fetch registrations', error: error.message });

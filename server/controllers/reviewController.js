@@ -54,15 +54,20 @@ const addReview = async (req, res) => {
 
     // Get venue owner
     const venue = await Registration.findById(venueId);
-    if (venue) {
-      // Create notification for venue owner
-      await createNotification(
-        venue.ownerId,
-        'review',
-        'New Review Received',
-        `${user.username || user.name} has left a ${rating}-star review for your venue`,
-        `/venues/${venueId}`
-      );
+    if (venue && venue.ownerId) {
+      try {
+        // Create notification for venue owner
+        await createNotification(
+          venue.ownerId,
+          'review',
+          'New Review Received',
+          `${user.username || user.name} has left a ${rating}-star review for your venue`,
+          `/venues/${venueId}`
+        );
+      } catch (notificationError) {
+        console.error('Error creating notification:', notificationError);
+        // Continue with the review creation even if notification fails
+      }
     }
 
     res.status(201).json(newReview);

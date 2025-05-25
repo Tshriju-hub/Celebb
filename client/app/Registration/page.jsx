@@ -231,82 +231,103 @@ export default function PartyPalaceRegistration() {
       }
     } catch (error) {
       console.error("Error submitting registration:", error);
-      toast.error(error.response?.data?.message || "An error occurred while submitting the registration.");
+      const errorMessage = error.response?.data?.message;
+      
+      // Handle specific error cases
+      if (errorMessage) {
+        if (errorMessage.includes('ownerEmail')) {
+          toast.error("This email address is already registered. Please use a different email address.");
+        } else if (errorMessage.includes('name')) {
+          toast.error("This venue name is already taken. Please choose a different name.");
+        } else if (errorMessage.includes('phone')) {
+          toast.error("This phone number is already registered. Please use a different phone number.");
+        } else if (errorMessage.includes('qrCode')) {
+          toast.error("This QR code is already in use. Please provide a different QR code.");
+        } else if (errorMessage.includes('companyRegistration')) {
+          toast.error("This company registration document is already registered. Please provide different documents.");
+        } else if (errorMessage.includes('ownerCitizenship')) {
+          toast.error("This citizenship document is already registered. Please provide different documents.");
+        } else {
+          toast.error(errorMessage);
+        }
+      } else {
+        toast.error("An error occurred while submitting the registration. Please try again.");
+      }
     }
   };
 
   return (
-    <div className="min-h-screen bg-[#6D0C0E] flex flex-col items-center p-8">
-      <Link href="/" className="mb-6">
-        <img src="/Image/logo.png" alt="Logo" className="h-20 w-auto" />
+    <div className="min-h-screen bg-[#6D0C0E] py-12">
+      <div className="max-w-6xl mx-auto px-4">
+        <div className="flex justify-center mb-8">
+          <Link href="/">
+            <img src="/Image/logo.png" alt="Logo" className="h-32 w-auto" />
       </Link>
+        </div>
+        <div className="bg-white rounded-xl shadow-lg p-8">
+          <div className="mb-8">
+            <h1 className="text-3xl font-bold text-[#6D0C0E] mb-4">Venue Registration</h1>
       <ToastContainer />
+          </div>
 
-      <div className="bg-white shadow-2xl p-8 w-full max-w-6xl rounded-2xl">
-        <h2 className="text-[#6D0C0E] text-3xl font-bold text-center mb-6">
-          Party Palace Registration
-        </h2>
-        <p className="text-gray-600 text-center mb-8">
-          Please fill out the form below to register your venue. All fields marked with * are required.
-        </p>
-
-        <div className="flex justify-center gap-4 mb-8">
-          {[1, 2, 3, 4, 5, 6].map((num) => (
+          <div className="flex justify-center gap-4 mb-8">
+            {[1, 2, 3, 4, 5, 6].map((num) => (
             <button
               key={num}
-              onClick={() => handleStepClick(num)}
-              className={`w-10 h-10 rounded-full flex items-center justify-center text-white transition-all duration-300 ${
-                step === num
-                  ? "bg-[#6D0C0E] scale-110 shadow-lg"
-                  : completedSteps.includes(num)
-                  ? "bg-green-600 hover:bg-green-700"
-                  : "bg-gray-300 cursor-not-allowed"
-              }`}
-              disabled={!completedSteps.includes(num) && num !== Math.max(...completedSteps) + 1}
+                onClick={() => handleStepClick(num)}
+                className={`w-10 h-10 rounded-full flex items-center justify-center text-white transition-all duration-300 ${
+                  step === num
+                    ? "bg-[#6D0C0E] scale-110 shadow-lg"
+                    : completedSteps.includes(num)
+                    ? "bg-green-600 hover:bg-green-700"
+                    : "bg-gray-300 cursor-not-allowed"
+                }`}
+                disabled={!completedSteps.includes(num) && num !== Math.max(...completedSteps) + 1}
             >
               {num}
             </button>
           ))}
         </div>
 
-        {step === 1 && <OwnerDetails formData={formData} handleChange={handleChange} />}
-        {step === 2 && <VenueDetails formData={formData} handleChange={handleChange} />}
-        {step === 3 && <VenueSpace formData={formData} handleChange={handleChange} />}
-        {step === 4 && <AdditionalServices formData={formData} handleChange={handleChange} />}
-        {step === 5 && (
-          <DocumentUpload
-            handleImageUpload={handleImageUpload}
-            handleFileUpload={handleFileUpload}
-            handleRemoveImage={handleRemoveImage}
-            formData={formData}
-          />
-        )}
-        {step === 6 && <ReviewSubmit formData={formData} />}
+          {step === 1 && <OwnerDetails formData={formData} handleChange={handleChange} />}
+          {step === 2 && <VenueDetails formData={formData} handleChange={handleChange} />}
+          {step === 3 && <VenueSpace formData={formData} handleChange={handleChange} />}
+          {step === 4 && <AdditionalServices formData={formData} handleChange={handleChange} />}
+          {step === 5 && (
+            <DocumentUpload
+              handleImageUpload={handleImageUpload}
+              handleFileUpload={handleFileUpload}
+              handleRemoveImage={handleRemoveImage}
+              formData={formData}
+            />
+          )}
+          {step === 6 && <ReviewSubmit formData={formData} />}
 
-        <div className="flex justify-between mt-8">
-          {step > 1 && (
+          <div className="flex justify-between mt-8">
+            {step > 1 && (
               <button
                 onClick={prevStep}
-              className="bg-gray-500 text-white px-6 py-2 rounded-lg hover:bg-gray-600 transition-colors"
+                className="bg-gray-500 text-white px-6 py-2 rounded-lg hover:bg-gray-600 transition-colors"
               >
                 Back
               </button>
-          )}
-          {step < 6 ? (
+            )}
+            {step < 6 ? (
               <button
                 onClick={nextStep}
-              className="bg-[#6D0C0E] text-white px-6 py-2 rounded-lg hover:bg-[#8D0C0E] transition-colors ml-auto"
+                className="bg-[#6D0C0E] text-white px-6 py-2 rounded-lg hover:bg-[#8D0C0E] transition-colors ml-auto"
               >
                 Next
               </button>
-          ) : (
+            ) : (
               <button
-              onClick={handleSubmit}
-              className="bg-green-600 text-white px-6 py-2 rounded-lg hover:bg-green-700 transition-colors ml-auto"
-            >
-              Submit
+                onClick={handleSubmit}
+                className="bg-green-600 text-white px-6 py-2 rounded-lg hover:bg-green-700 transition-colors ml-auto"
+              >
+                Submit
               </button>
-          )}
+            )}
+            </div>
           </div>
       </div>
     </div>

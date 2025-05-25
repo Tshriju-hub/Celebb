@@ -7,6 +7,7 @@ import { FaEnvelope, FaLock, FaGoogle, FaArrowLeft } from 'react-icons/fa';
 import Image from 'next/image';
 import Link from 'next/link';
 import { getSession } from 'next-auth/react';
+import { toast } from 'react-hot-toast';
 
 export default function LoginPage() {
   const { data: session, status } = useSession();
@@ -17,6 +18,15 @@ export default function LoginPage() {
       router.replace('/');
     }
   }, [status, router]);
+
+  useEffect(() => {
+    const searchParams = new URLSearchParams(window.location.search);
+    const error = searchParams.get('error');
+    
+    if (error === 'venue_rejected') {
+      toast.error("Your venue registration has been rejected. Your account has been permanently suspended.");
+    }
+  }, []);
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');

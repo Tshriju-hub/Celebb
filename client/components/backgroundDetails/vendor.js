@@ -1,10 +1,40 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import { useSession } from 'next-auth/react';
+import { useEffect, useState } from 'react';
+import axios from 'axios';
 
 const VendorJoin = () => {
-  const { data: session } = useSession(); // Fixed destructuring
-  const userRole = session?.user?.role; // Get user role from session
+  const { data: session } = useSession();
+  const [hasRegisteredVenue, setHasRegisteredVenue] = useState(false);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const checkVenueRegistration = async () => {
+      if (session?.user?.role === 'owner' && session?.user?.token) {
+        try {
+          const response = await axios.post(
+            "http://localhost:5000/api/auth/registrations/owner",
+            { ownerId: session.user.id },
+            {
+              headers: {
+                Authorization: `Bearer ${session.user.token}`
+              }
+            }
+          );
+          setHasRegisteredVenue(response.data && response.data.length > 0);
+        } catch (error) {
+          console.error('Error checking venue registration:', error);
+        } finally {
+          setLoading(false);
+        }
+      } else {
+        setLoading(false);
+      }
+    };
+
+    checkVenueRegistration();
+  }, [session]);
 
   return (
     <div className="flex bg-[#f5efeb] min-h-screen w-full">
@@ -23,12 +53,20 @@ const VendorJoin = () => {
 
         {/* Buttons */}
         <div className="mt-36 flex flex-col items-center space-y-5">
-          {userRole === 'owner' ? (
-            <Link href="/Registration">
-              <button className="w-60 border border-[#8f1919] bg-white text-[#8f1919] font-semibold py-3 rounded-md text-lg hover:bg-[#8f1919] hover:text-white transition-all">
-                Join Now
-              </button>
-            </Link>
+          {session?.user?.role === 'owner' ? (
+            hasRegisteredVenue ? (
+              <Link href="/owner/dashboard">
+                <button className="w-60 border border-[#8f1919] bg-white text-[#8f1919] font-semibold py-3 rounded-md text-lg hover:bg-[#8f1919] hover:text-white transition-all">
+                  Go to Dashboard
+                </button>
+              </Link>
+            ) : (
+              <Link href="/Registration">
+                <button className="w-60 border border-[#8f1919] bg-white text-[#8f1919] font-semibold py-3 rounded-md text-lg hover:bg-[#8f1919] hover:text-white transition-all">
+                  Register Venue
+                </button>
+              </Link>
+            )
           ) : (
             <Link href="/register-owner">
               <button className="w-60 border border-[#8f1919] bg-white text-[#8f1919] font-semibold py-3 rounded-md text-lg hover:bg-[#8f1919] hover:text-white transition-all">

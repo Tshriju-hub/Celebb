@@ -2,6 +2,7 @@
 
 import { createContext, useState, useEffect, useContext } from 'react';
 import io from 'socket.io-client';
+import { useSession } from 'next-auth/react';
 
 const SocketContext = createContext();
 
@@ -10,31 +11,27 @@ export const useSocketContext = () => useContext(SocketContext);
 export const SocketContextProvider = ({ children }) => {
 	const [socket, setSocket] = useState(null);
 	const [onlineUsers, setOnlineUsers] = useState({});
-	const [token, setToken] = useState(null);
+	const { data: session, status } = useSession();
 
 	useEffect(() => {
-		if (typeof window !== 'undefined') {
-			const storedToken = localStorage.getItem('token');
-			if (storedToken) {
-				try {
-					const decoded = JSON.parse(atob(storedToken.split('.')[1]));
-					setToken(decoded.userId);
-				} catch (error) {
-					console.error('Error decoding token:', error);
-				}
-			}
+		if (status === 'loading') return;
+
+		const userId = session?.user?.id;
+		if (!userId) {
+			console.log('No user ID available');
+			return;
 		}
-	}, []);
 
-	useEffect(() => {
-		if (!token) return;
-
+		console.log('Initializing socket connection...');
 		const newSocket = io('http://localhost:5000', {
-			query: { userId: token },
-			transports: ['websocket', 'polling'],
+			query: { userId },
+			transports: ['polling', 'websocket'],
 			reconnectionAttempts: 5,
 			reconnectionDelay: 1000,
-			timeout: 10000
+			timeout: 10000,
+			auth: session?.user?.token ? { token: session.user.token } : undefined,
+			forceNew: true,
+			autoConnect: true
 		});
 
 		newSocket.on('connect', () => {
@@ -43,20 +40,29 @@ export const SocketContextProvider = ({ children }) => {
 
 		newSocket.on('connect_error', (error) => {
 			console.error('Socket connection error:', error);
+			if (error.message.includes('Missing userId')) {
+				console.error('Missing userId in socket connection');
+			}
+		});
+
+		newSocket.on('disconnect', (reason) => {
+			console.log('Socket disconnected:', reason);
 		});
 
 		newSocket.on('getOnlineUsers', (users) => {
+			console.log('Received online users:', users);
 			setOnlineUsers(users);
 		});
 
 		setSocket(newSocket);
 
 		return () => {
+			console.log('Cleaning up socket connection...');
 			if (newSocket) {
 				newSocket.disconnect();
 			}
 		};
-	}, [token]);
+	}, [session, status]);
 
 	return (
 		<SocketContext.Provider value={{ socket, onlineUsers }}>

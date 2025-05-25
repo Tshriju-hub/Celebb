@@ -4,6 +4,7 @@ const express = require("express");
 const cors = require("cors");
 // const cookieParser = require("cookie-parser");
 const dotenv = require("dotenv");
+const jwt = require("jsonwebtoken");
 
 dotenv.config();
 
@@ -32,15 +33,45 @@ const getReceiverSocketId = (receiverId) => {
   return userSocketMap[receiverId] || null;
 };
 
+// Simplified middleware to authenticate socket connections
+io.use((socket, next) => {
+  try {
+    const userId = socket.handshake.query.userId;
+    const token = socket.handshake.auth.token;
+
+    if (!userId) {
+      console.log('Socket connection attempt without userId');
+      return next(new Error('Missing userId'));
+    }
+
+    socket.userId = userId;
+
+    if (token) {
+      try {
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        socket.user = decoded;
+      } catch (error) {
+        console.error('Token verification failed:', error);
+      }
+    }
+
+    next();
+  } catch (error) {
+    console.error('Socket middleware error:', error);
+    next(error);
+  }
+});
+
 io.on("connection", (socket) => {
-  const userId = socket.handshake.query.userId;
+  console.log('New socket connection:', socket.id);
+  const userId = socket.userId;
+  
   if (userId && userId !== "undefined") {
     userSocketMap[userId] = socket.id;
     console.log(`User ${userId} connected with socket id ${socket.id}`);
   }
 
   io.emit("getOnlineUsers", userSocketMap);
-  console.log("Online users:", userSocketMap);
 
   socket.on("disconnect", () => {
     console.log("User disconnected:", socket.id);
@@ -50,13 +81,22 @@ io.on("connection", (socket) => {
 
     if (disconnectedUserId) {
       delete userSocketMap[disconnectedUserId];
-      console.log(`User ${disconnectedUserId} disconnected`);
       io.emit("getOnlineUsers", userSocketMap);
     }
   });
 
   socket.on("error", (error) => {
     console.error("Socket error:", error);
+  });
+
+  socket.on("joinVenueRoom", (roomId) => {
+    socket.join(roomId);
+    console.log(`Socket ${socket.id} joined venue room ${roomId}`);
+  });
+
+  socket.on("venueMessage", (data) => {
+    const { roomId, ...message } = data;
+    io.to(roomId).emit("venueMessage", message);
   });
 });
 

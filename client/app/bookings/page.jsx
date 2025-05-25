@@ -22,6 +22,7 @@ const UserBooking = () => {
   const [catering, setCatering] = useState([]);
   const [loyaltyPoints, setLoyaltyPoints] = useState(0);
   const [pointsToRedeem, setPointsToRedeem] = useState(0);
+  const [errors, setErrors] = useState({});
   const [showLoyaltySection, setShowLoyaltySection] = useState(false);
   const [menu, setMenu] = useState({
     starters: {
@@ -139,6 +140,8 @@ const UserBooking = () => {
       alcoholicDrinks: { beers: [], whiskey: [] }
     }
   });
+  
+
 
   // Fetch loyalty points when session is available
   useEffect(() => {
@@ -537,13 +540,24 @@ const UserBooking = () => {
 
   const handleContinueHalls = (e) => {
     e.preventDefault();
-    if (eventType && eventTime && totalGuests && date) {
-      setShowSelectOptions(true);
-    } else {
-      alert("Please fill in all the required fields.");
+  
+    const newErrors = {};
+  
+    if (!eventType) newErrors.eventType = 'Please select an event type.';
+    if (!eventTime) newErrors.eventTime = 'Please select an event time.';
+    if (!totalGuests) newErrors.totalGuests = 'Please enter total guests.';
+    if (!date) newErrors.date = 'Please select a date.';
+  
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
+      return;
     }
+  
+    // Clear previous errors and continue
+    setErrors({});
+    setShowSelectOptions(true);
   };
-
+  
   const handleContinueMenu = (e) => {
     e.preventDefault();
     if (hall.length > 0 || catering) {
@@ -692,82 +706,84 @@ const UserBooking = () => {
                 </span>
               </div>
               <div className="rounded-md mt-2 mx-5 py-2 mb-2">
-                <h1 className="text-2xl font-bold  mb-4">
-                  Please Enter Your Details
-                </h1>
+      <h1 className="text-2xl font-bold mb-4">Please Enter Your Details</h1>
 
-                <div className="space-y-6 md:space-y-0 md:flex md:flex-row md:space-x-6">
-                  <div className="w-full md:w-1/2">
-                    <div className="mb-4">
-                      <label
-                        htmlFor="eventType"
-                        className="block  text-xl mb-1"
-                      >
-                        Event Type:
-                      </label>
-                      <select
-                        id="eventType"
-                        className="border border-gray-300 rounded-md p-2 w-full"
-                        value={eventType}
-                        onChange={(e) => setEventType(e.target.value)}
-                      >
-                        <option value="">Select Event Type</option>
-                        <option value="wedding">Wedding</option>
-                        <option value="conference">Conference</option>
-                        <option value="party">Party</option>
-                      </select>
-                    </div>
-                    <div className="mb-4">
-                      <label
-                        htmlFor="eventTime"
-                        className="block  text-xl mb-1"
-                      >
-                        Event Time:
-                      </label>
-                      <select
-                        id="eventTime"
-                        className="border border-gray-300 rounded-md p-2 w-full"
-                        value={eventTime}
-                        onChange={(e) => setEventTime(e.target.value)}
-                      >
-                        <option value="">Select Event Time</option>
-                        <option value="morning">Morning</option>
-                        <option value="evening">Evening</option>
-                      </select>
-                    </div>
-                  </div>
-                  <div className="w-full md:w-1/2">
-                    <div className="mb-4">
-                      <label
-                        htmlFor="totalGuests"
-                        className="block  text-xl mb-1"
-                      >
-                        Total Guests:
-                      </label>
-                      <input
-                        type="number"
-                        id="totalGuests"
-                        className="border border-gray-300 rounded-md p-2 w-full"
-                        value={totalGuests}
-                        onChange={(e) => setTotalGuests(e.target.value)}
-                      />
-                    </div>
-                    <div className="mb-4">
-                      <label
-                        htmlFor="date"
-                        className="block text-xl mb-1"
-                      >
-                        Date:
-                      </label>
-                      <DatePickerWithValidation
-                        venueId={venueId}
-                        value={date}
-                        onChange={setDate}
-                        eventTime={eventTime}
-                      />
-                    </div>
-                  </div>
-                </div>
+      <div className="space-y-6 md:space-y-0 md:flex md:flex-row md:space-x-6">
+        <div className="w-full md:w-1/2">
+          <div className="mb-4">
+            <label htmlFor="eventType" className="block text-xl mb-1">
+              Event Type:
+            </label>
+            <select
+              id="eventType"
+              className="border border-gray-300 rounded-md p-2 w-full"
+              value={eventType}
+              onChange={(e) => setEventType(e.target.value)}
+            >
+              <option value="">Select Event Type</option>
+              <option value="wedding">Wedding</option>
+              <option value="conference">Conference</option>
+              <option value="party">Party</option>
+            </select>
+            {errors.eventType && (
+              <p className="text-red-500 text-sm mt-1">{errors.eventType}</p>
+            )}
+          </div>
+
+          <div className="mb-4">
+            <label htmlFor="eventTime" className="block text-xl mb-1">
+              Event Time:
+            </label>
+            <select
+              id="eventTime"
+              className="border border-gray-300 rounded-md p-2 w-full"
+              value={eventTime}
+              onChange={(e) => setEventTime(e.target.value)}
+            >
+              <option value="">Select Event Time</option>
+              <option value="morning">Morning</option>
+              <option value="evening">Evening</option>
+            </select>
+            {errors.eventTime && (
+              <p className="text-red-500 text-sm mt-1">{errors.eventTime}</p>
+            )}
+          </div>
+        </div>
+
+        <div className="w-full md:w-1/2">
+          <div className="mb-4">
+            <label htmlFor="totalGuests" className="block text-xl mb-1">
+              Total Guests:
+            </label>
+            <input
+              type="number"
+              id="totalGuests"
+              className="border border-gray-300 rounded-md p-2 w-full"
+              value={totalGuests}
+              onChange={(e) => setTotalGuests(e.target.value)}
+            />
+            {errors.totalGuests && (
+              <p className="text-red-500 text-sm mt-1">{errors.totalGuests}</p>
+            )}
+          </div>
+
+          <div className="mb-4">
+            <label htmlFor="date" className="block text-xl mb-1">
+              Date:
+            </label>
+            <DatePickerWithValidation
+              venueId={venueId}
+              value={date}
+              onChange={setDate}
+              eventTime={eventTime}
+            />
+            {errors.date && (
+              <p className="text-red-500 text-sm mt-1">{errors.date}</p>
+            )}
+          </div>
+        </div>
+      </div>
+
                 <div className="mx-4">
                   <button
                     onClick={handleContinueHalls}
@@ -913,7 +929,7 @@ const UserBooking = () => {
                   </svg>
                 </div>
                 <span className="text-xl font-bold  uppercase">
-                  Select Food Package
+                  Select Package
                 </span>{" "}
               </div>{showSelectOptions && (
   <>
@@ -1578,7 +1594,7 @@ const UserBooking = () => {
                         <h3 className="text-lg font-semibold mb-4">Loyalty Points Redemption</h3>
                         <div className="mb-4">
                           <p className="text-gray-600">Available Points: {loyaltyPoints}</p>
-                          <p className="text-sm text-gray-500">Minimum 100 points required to redeem</p>
+                         
                         </div>
                         <div className="flex items-center gap-4">
                           <input

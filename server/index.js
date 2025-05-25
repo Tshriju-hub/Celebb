@@ -7,6 +7,9 @@ const {
   loggingMiddleware,
   errorMiddleware
 } = require('./middleware/config');
+const { app, server } = require('./socket/socket');
+
+// Import routes
 const authRoutes = require('./routes/auth');
 const userRoutes = require('./routes/user');
 const reviewRoutes = require('./routes/reviews');
@@ -14,41 +17,39 @@ const loyaltyRoutes = require('./routes/loyaltyRoutes');
 const notificationRoutes = require('./routes/notifications');
 const analyticsRoutes = require('./routes/analyticsRoutes');
 const serviceImagesRoutes = require('./routes/serviceImages');
-const { app, server } = require('./socket/socket');
+const bookingRoutes = require('./routes/bookings');
+const userSettingsRoutes = require('./routes/userSettings');
+const newsRoutes = require('./routes/news');
 
 dotenv.config();
 
 // Connect to database
 connectDB();
 
-// Apply middleware
+// Middleware
 app.use(cors({
   origin: ['http://localhost:3000', process.env.Frontend_URL].filter(Boolean),
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
   credentials: true,
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
 app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
-app.use([...securityMiddleware, ...loggingMiddleware]);
+app.use(securityMiddleware);
+app.use(loggingMiddleware);
 
 // Routes
-app.get('/', (req, res) => {
-  res.json({ message: 'Welcome to Celebration Station API!' });
-});
 app.use('/api/auth', authRoutes);
-app.use('/api/user', userRoutes);
+app.use('/api/users', userRoutes);
 app.use('/api/reviews', reviewRoutes);
-app.use('/api/bookings', require('./routes/bookings'));
-app.use('/api/news', require('./routes/news'));
 app.use('/api/loyalty', loyaltyRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/analytics', analyticsRoutes);
 app.use('/api/service-images', serviceImagesRoutes);
-app.use('/uploads', express.static('uploads'));
-app.use('/messages', require('./routes/message'));
+app.use('/api/bookings', bookingRoutes);
+app.use('/api/user-settings', userSettingsRoutes);
+app.use('/api/news', newsRoutes);
 
-// Error handling
+// Error handling middleware
 app.use(errorMiddleware);
 
 // Start server

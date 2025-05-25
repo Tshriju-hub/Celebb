@@ -14,44 +14,20 @@ export default function MakeupGalleryPage() {
   useEffect(() => {
     const fetchImages = async () => {
       try {
-        // Get the auth token from localStorage
-        const token = localStorage.getItem('token');
-        if (!token) {
-          setError('Please log in to view images');
-          setLoading(false);
-          return;
-        }
-
-        const config = {
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
-        };
-
-        const response = await axios.get('http://localhost:5000/api/service-images?category=makeup', config);
+        // Remove token requirement and directly fetch images
+        const response = await axios.get('http://localhost:5000/api/service-images?category=makeup');
         setImages(response.data);
 
-        // Fetch venue details for each owner
+        // Fetch venue details for each owner using the correct endpoint
         const ownerIds = [...new Set(response.data.map(img => img.owner))];
         const venuePromises = ownerIds.map(ownerId =>
-          axios.post('http://localhost:5000/api/auth/registrations/owner', { ownerId }, config)
+          fetchVenueDetails(ownerId)
         );
         
-        const venueResponses = await Promise.all(venuePromises);
-        const venueMap = {};
-        venueResponses.forEach((res, index) => {
-          if (res.data && res.data.length > 0) {
-            venueMap[ownerIds[index]] = res.data[0];
-          }
-        });
-        setVenues(venueMap);
+        await Promise.all(venuePromises);
       } catch (error) {
         console.error('Error fetching images:', error);
-        if (error.response?.status === 401) {
-          setError('Please log in to view images');
-        } else {
-          setError('Failed to load images');
-        }
+        setError('Failed to load images');
       } finally {
         setLoading(false);
       }
@@ -59,6 +35,22 @@ export default function MakeupGalleryPage() {
 
     fetchImages();
   }, []);
+
+  const fetchVenueDetails = async (ownerId) => {
+    try {
+      const response = await axios.post('http://localhost:5000/api/auth/registrations/owner', {
+        ownerId: ownerId
+      });
+      if (response.data && response.data.length > 0) {
+        setVenues(prev => ({
+          ...prev,
+          [ownerId]: response.data[0]
+        }));
+      }
+    } catch (error) {
+      console.error('Error fetching venue details:', error);
+    }
+  };
 
   if (loading) {
     return (

@@ -27,6 +27,8 @@ import {
   FaMusic,
   FaThumbsUp,
   FaThumbsDown,
+  FaInfoCircle,
+  FaTag,
 } from "react-icons/fa";
 import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
@@ -369,54 +371,88 @@ export default function VenueDetailPage() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-20 relative z-10">
         <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
           {/* Quick Info Section */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6 p-8 border-b">
-            <div className="flex items-center space-x-3">
-              <div className="bg-[#7a1313]/10 p-3 rounded-full">
-                <FaPhone className="text-[#7a1313] text-xl" />
-              </div>
-              <div>
-                <p className="text-sm text-gray-500">Phone</p>
-                <div className="flex items-center space-x-2">
-                  <p className="font-medium">{venue.phone || 'Phone number not available'}</p>
-                  <a
-                    href={`https://wa.me/${(venue.phone || '').replace(/[^0-9]/g, "")}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-green-500 hover:text-green-600"
-                  >
-                    <FaWhatsapp size={18} />
-                  </a>
+          <div className="bg-gradient-to-r from-[#7a1313]/5 to-[#9a1515]/5 p-8 border-b">
+            <div className="max-w-4xl mx-auto">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div className="flex items-center space-x-3">
+                  <div className="bg-[#7a1313]/10 p-3 rounded-full">
+                    <FaUsers className="text-[#7a1313] text-xl" />
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-500">Capacity</p>
+                    <p className="font-medium">{venue.capacity} people</p>
+                  </div>
                 </div>
-                </div>
-              </div>
 
-            <div className="flex items-center space-x-3">
-              <div className="bg-[#7a1313]/10 p-3 rounded-full">
-                <FaCalendarAlt className="text-[#7a1313] text-xl" />
-              </div>
-              <div>
-                <p className="text-sm text-gray-500">Established</p>
-                <p className="font-medium">{venue.established}</p>
+                <div className="flex items-center space-x-3">
+                  <div className="bg-[#7a1313]/10 p-3 rounded-full">
+                    <FaBuilding className="text-[#7a1313] text-xl" />
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-500">Number of Halls</p>
+                    <p className="font-medium">{venue.numberOfHalls}</p>
+                  </div>
+                </div>
+
+                <div className="flex items-center space-x-3">
+                  <div className="bg-[#7a1313]/10 p-3 rounded-full">
+                    <FaPhone className="text-[#7a1313] text-xl" />
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-500">Phone</p>
+                    <div className="flex items-center space-x-2">
+                      <p className="font-medium">{venue.phone || 'Phone not available'}</p>
+                      <a
+                        href={`https://wa.me/${(venue.phone || '').replace(/[^0-9]/g, "")}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-green-500 hover:text-green-600"
+                      >
+                        <FaWhatsapp size={18} />
+                      </a>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
+          </div>
 
-            <div className="flex items-center space-x-3">
-              <div className="bg-[#7a1313]/10 p-3 rounded-full">
-                <FaUsers className="text-[#7a1313] text-xl" />
+          {/* Description and Categories Section */}
+          <div className="p-8 border-b">
+            <div className="max-w-4xl mx-auto">
+              {/* Description */}
+              <div className="mb-8">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="bg-[#7a1313]/10 p-2 rounded-lg">
+                    <FaInfoCircle className="text-[#7a1313] text-xl" />
+                  </div>
+                  <h2 className="text-2xl font-bold text-[#7a1313]">About the Venue</h2>
+                </div>
+                <div className="bg-gray-50 rounded-xl p-6">
+                  <p className="text-gray-600 leading-relaxed text-lg">
+                    {venue.description || 'No description available for this venue.'}
+                  </p>
+                </div>
               </div>
-              <div>
-                <p className="text-sm text-gray-500">Capacity</p>
-                <p className="font-medium">{venue.capacity} people</p>
-              </div>
-            </div>
 
-            <div className="flex items-center space-x-3">
-              <div className="bg-[#7a1313]/10 p-3 rounded-full">
-                <FaBuilding className="text-[#7a1313] text-xl" />
-              </div>
+              {/* Categories */}
               <div>
-                <p className="text-sm text-gray-500">Number of Halls</p>
-                <p className="font-medium">{venue.numberOfHalls}</p>
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="bg-[#7a1313]/10 p-2 rounded-lg">
+                    <FaTag className="text-[#7a1313] text-xl" />
+                  </div>
+                  <h2 className="text-2xl font-bold text-[#7a1313]">Categories</h2>
+                </div>
+                <div className="flex flex-wrap gap-3">
+                  {venue.category?.split(',').map((cat, index) => (
+                    <span
+                      key={index}
+                      className="px-4 py-2 bg-gradient-to-r from-[#7a1313] to-[#9a1515] text-white rounded-full text-sm font-medium shadow-sm hover:shadow-md transition-all duration-300"
+                    >
+                      {cat.trim()}
+                    </span>
+                  ))}
+                </div>
               </div>
             </div>
           </div>
