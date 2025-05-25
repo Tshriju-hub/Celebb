@@ -331,7 +331,12 @@ export default function VenueDetailPage() {
             {/* Venue Name and Address - Positioned higher */}
             <div className="absolute top-1/4 left-0 right-0 p-8 text-white">
               <div className="flex items-center gap-3">
-                <h1 className="text-4xl font-bold mb-2">{venue.name}</h1>
+                <Link 
+                  href={`/venues/profile/${venue._id}`}
+                  className="hover:underline transition-colors"
+                >
+                  <h1 className="text-4xl font-bold mb-2">{venue.name}</h1>
+                </Link>
                 <MessageIcon venueId={venue._id} />
               </div>
               <p className="text-lg">{venue.address}</p>
